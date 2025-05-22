@@ -46,7 +46,7 @@ public class ServidorHilos extends Thread {
                             respuesta.put("estado", "ok");
                             respuesta.put("mensaje", "Hotel guardado con código " + resultado);
                         }
-
+                        break; // Faltaba un break aquí
 
                     case "listarHoteles":
                         List<Hotel> hoteles = GestorHoteles.listar();
@@ -104,6 +104,53 @@ public class ServidorHilos extends Thread {
                         }
                         break;
 
+                    // Nuevo case para listar habitaciones
+                    case "listarHabitaciones":
+                        List<Habitacion> habitaciones = GestorHabitaciones.listar();
+                        JSONArray arrHab = new JSONArray();
+                        for (Habitacion h : habitaciones) {
+                            JSONObject obj = new JSONObject();
+                            obj.put("codigo", h.getCodigo());
+                            obj.put("estilo", h.getEstilo());
+                            obj.put("precio", h.getPrecio());
+                            arrHab.put(obj);
+                        }
+                        respuesta.put("estado", "ok");
+                        respuesta.put("habitaciones", arrHab);
+                        break;
+
+                    // Nuevo case para modificar habitación
+                    case "modificarHabitacion":
+                        JSONObject habModificar = jsonEntrada.getJSONObject("habitacion");
+                        String codigoMod = habModificar.getString("codigo");
+                        String estiloMod = habModificar.getString("estilo");
+                        double precioMod = habModificar.getDouble("precio");
+
+                        boolean habModificada = GestorHabitaciones.modificar(
+                                new Habitacion(codigoMod, estiloMod, precioMod));
+
+                        if (habModificada) {
+                            respuesta.put("estado", "ok");
+                            respuesta.put("mensaje", "Habitación modificada correctamente");
+                        } else {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Habitación no encontrada");
+                        }
+                        break;
+
+                    // Nuevo case para eliminar habitación
+                    case "eliminarHabitacion":
+                        String codigoHabEliminar = jsonEntrada.getString("codigo");
+                        boolean habEliminada = GestorHabitaciones.eliminar(codigoHabEliminar);
+
+                        if (habEliminada) {
+                            respuesta.put("estado", "ok");
+                            respuesta.put("mensaje", "Habitación eliminada correctamente");
+                        } else {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Habitación no encontrada");
+                        }
+                        break;
 
                     default:
                         respuesta.put("estado", "error");

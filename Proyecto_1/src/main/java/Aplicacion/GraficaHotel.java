@@ -37,7 +37,7 @@ public class GraficaHotel {
         Button btnRegistrar = new Button("Registrar");
         btnRegistrar.setOnAction(e -> registrarHotel());
 
-        Button btnListar = new Button("Listar");
+        Button btnListar = new Button("Buscar");
         btnListar.setOnAction(e -> listarHoteles());
 
         Button btnModificar = new Button("Modificar");

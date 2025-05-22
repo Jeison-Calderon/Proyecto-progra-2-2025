@@ -4,7 +4,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class GestorHoteles {
     private static final String ARCHIVO_HOTELES = "hoteles.dat";
 
@@ -17,20 +16,28 @@ public class GestorHoteles {
         List<Hotel> hoteles = listar();
         if (hoteles.isEmpty()) return 0;
 
-        String ultimoCodigo = hoteles.get(hoteles.size() - 1).getCodigoHotel(); // H-001
+        String ultimoCodigo = hoteles.get(hoteles.size() - 1).getCodigoHotel();
         return Integer.parseInt(ultimoCodigo.split("-")[1]);
     }
 
-    public static synchronized void guardar(Hotel hotel) {
-        try (
-                FileOutputStream fos = new FileOutputStream(ARCHIVO_HOTELES, true);
-                MiObjectOutputStream oos = existeArchivo() ? new MiObjectOutputStream(fos) : new MiObjectOutputStream(fos, false)
-        ) {
-            oos.writeObject(hotel);
-        } catch (IOException e) {
-            e.printStackTrace();
+    public static synchronized String guardar(String nombre, String ubicacion) {
+        List<Hotel> hoteles = listar();
+
+        for (Hotel h : hoteles) {
+            if (h.getNombre().equalsIgnoreCase(nombre) &&
+                    h.getUbicacion().equalsIgnoreCase(ubicacion)) {
+                return "duplicado";
+            }
         }
+
+        String codigo = generarCodigo();
+        Hotel nuevo = new Hotel(codigo, nombre, ubicacion);
+        hoteles.add(nuevo);
+        sobrescribirArchivo(hoteles);
+        return codigo;
     }
+
+
 
     public static List<Hotel> listar() {
         List<Hotel> hoteles = new ArrayList<>();
@@ -47,16 +54,52 @@ public class GestorHoteles {
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
-            // Si no existe el archivo, simplemente devolvemos la lista vacía
         }
         return hoteles;
+    }
+
+    public static synchronized boolean eliminar(String codigo) {
+        List<Hotel> hoteles = listar();
+        boolean encontrado = hoteles.removeIf(h -> h.getCodigoHotel().equals(codigo));
+        if (encontrado) {
+            sobrescribirArchivo(hoteles);
+        }
+        return encontrado;
+    }
+
+    public static synchronized boolean modificar(Hotel hotelModificado) {
+        List<Hotel> hoteles = listar();
+        boolean encontrado = false;
+        for (int i = 0; i < hoteles.size(); i++) {
+            if (hoteles.get(i).getCodigoHotel().equals(hotelModificado.getCodigoHotel())) {
+                hoteles.set(i, hotelModificado);
+                encontrado = true;
+                break;
+            }
+        }
+        if (encontrado) {
+            sobrescribirArchivo(hoteles);
+        }
+        return encontrado;
+    }
+
+    private static void sobrescribirArchivo(List<Hotel> hoteles) {
+        try (
+                FileOutputStream fos = new FileOutputStream(ARCHIVO_HOTELES);
+                ObjectOutputStream oos = new ObjectOutputStream(fos)
+        ) {
+            for (Hotel h : hoteles) {
+                oos.writeObject(h);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private static boolean existeArchivo() {
         return new File(ARCHIVO_HOTELES).exists();
     }
 
-    // Clase interna para evitar el encabezado al escribir más objetos
     private static class MiObjectOutputStream extends ObjectOutputStream {
         public MiObjectOutputStream(OutputStream out) throws IOException {
             super(out);
@@ -72,7 +115,7 @@ public class GestorHoteles {
         @Override
         protected void writeStreamHeader() throws IOException {
             if (existeArchivo()) {
-                reset(); // No escribir encabezado si ya existe el archivo
+                reset();
             } else {
                 super.writeStreamHeader();
             }

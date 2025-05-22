@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.Socket;
 import java.util.List;
 
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,16 +34,19 @@ public class ServidorHilos extends Thread {
                 switch (operacion) {
                     case "crearHotel":
                         JSONObject datosHotel = jsonEntrada.getJSONObject("hotel");
-                        String codigo = GestorHoteles.generarCodigo();
                         String nombre = datosHotel.getString("nombre");
                         String ubicacion = datosHotel.getString("ubicacion");
 
-                        Hotel hotel = new Hotel(codigo, nombre, ubicacion);
-                        GestorHoteles.guardar(hotel);
+                        String resultado = GestorHoteles.guardar(nombre, ubicacion);
 
-                        respuesta.put("estado", "ok");
-                        respuesta.put("mensaje", "Aplicación.Servidor.Hotel guardado con código " + codigo);
-                        break;
+                        if (resultado.equals("duplicado")) {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Ya existe un hotel con ese nombre y ubicación");
+                        } else {
+                            respuesta.put("estado", "ok");
+                            respuesta.put("mensaje", "Hotel guardado con código " + resultado);
+                        }
+
 
                     case "listarHoteles":
                         List<Hotel> hoteles = GestorHoteles.listar();
@@ -60,6 +62,49 @@ public class ServidorHilos extends Thread {
                         respuesta.put("hoteles", arr);
                         break;
 
+                    case "eliminarHotel":
+                        String codigoEliminar = jsonEntrada.getString("codigo");
+                        boolean eliminado = GestorHoteles.eliminar(codigoEliminar);
+                        if (eliminado) {
+                            respuesta.put("estado", "ok");
+                            respuesta.put("mensaje", "Hotel eliminado correctamente");
+                        } else {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Hotel no encontrado");
+                        }
+                        break;
+
+                    case "modificarHotel":
+                        JSONObject hotelModificar = jsonEntrada.getJSONObject("hotel");
+                        String codMod = hotelModificar.getString("codigo");
+                        String nomMod = hotelModificar.getString("nombre");
+                        String ubiMod = hotelModificar.getString("ubicacion");
+                        boolean modificado = GestorHoteles.modificar(new Hotel(codMod, nomMod, ubiMod));
+                        if (modificado) {
+                            respuesta.put("estado", "ok");
+                            respuesta.put("mensaje", "Hotel modificado correctamente");
+                        } else {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Hotel no encontrado");
+                        }
+                        break;
+
+                    case "crearHabitacion":
+                        JSONObject datosHab = jsonEntrada.getJSONObject("habitacion");
+                        String estilo = datosHab.getString("estilo");
+                        double precio = datosHab.getDouble("precio");
+
+                        String codHab = GestorHabitaciones.guardar(estilo, precio);
+                        if (codHab.equals("duplicado")) {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Habitación ya existe con ese estilo y precio.");
+                        } else {
+                            respuesta.put("estado", "ok");
+                            respuesta.put("mensaje", "Habitación registrada con código " + codHab);
+                        }
+                        break;
+
+
                     default:
                         respuesta.put("estado", "error");
                         respuesta.put("mensaje", "Operación no reconocida");
@@ -68,7 +113,6 @@ public class ServidorHilos extends Thread {
 
                 writer.println(respuesta.toString());
 
-                // Si quieres que "Chao!" finalice la conexión
                 if (operacion.equalsIgnoreCase("salir")) {
                     break;
                 }

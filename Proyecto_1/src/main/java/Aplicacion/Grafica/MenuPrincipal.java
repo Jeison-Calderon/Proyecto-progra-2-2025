@@ -1,5 +1,6 @@
 package Aplicacion.Grafica;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -107,49 +108,14 @@ public class MenuPrincipal {
         itemEditar.setOnAction(e -> {
             ModeloHabitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
-                TextInputDialog dialog = new TextInputDialog(String.valueOf(habitacionSeleccionada.getPrecio()));
-                dialog.setHeaderText("Editar precio:");
-                Optional<String> result = dialog.showAndWait();
-                result.ifPresent(nuevoPrecio -> {
-                    try {
-                        double precio = Double.parseDouble(nuevoPrecio);
-
-                        JSONObject request = new JSONObject();
-                        JSONObject hab = new JSONObject();
-                        hab.put("id", habitacionSeleccionada.getId());
-                        hab.put("estilo", habitacionSeleccionada.getEstilo());
-                        hab.put("precio", precio);
-                        hab.put("codigoHotel", hotel.getCodigo());
-
-                        request.put("operacion", "modificarHabitacion");
-                        request.put("habitacion", hab);
-
-                        enviarPeticion(request);
-                        cargarHabitacionesSimples(hotel.getCodigo(), tablaHabitaciones);
-                    } catch (NumberFormatException ex) {
-                        mostrarNotificacion("El precio debe ser un número válido", false);
-                    }
-                });
+                editarHabitacion(habitacionSeleccionada, hotel.getCodigo());
             }
         });
 
         itemBorrar.setOnAction(e -> {
             ModeloHabitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("Confirmar eliminar");
-                alert.setHeaderText("¿Está seguro que desea eliminar esta habitación?");
-                alert.setContentText("Habitación: " + habitacionSeleccionada.getEstilo());
-
-                Optional<ButtonType> result = alert.showAndWait();
-                if (result.isPresent() && result.get() == ButtonType.OK) {
-                    JSONObject request = new JSONObject();
-                    request.put("operacion", "eliminarHabitacion");
-                    request.put("id", habitacionSeleccionada.getId());
-
-                    enviarPeticion(request);
-                    cargarHabitacionesSimples(hotel.getCodigo(), tablaHabitaciones);
-                }
+                confirmarBorradoHabitacion(habitacionSeleccionada, null);
             }
         });
 
@@ -174,47 +140,116 @@ public class MenuPrincipal {
         request.put("operacion", "listarHabitaciones");
         request.put("codigoHotel", codigoHotel);
 
-        try {
-            writer.println(request.toString());
-            String respuestaStr = reader.readLine();
-            JSONObject respuesta = new JSONObject(respuestaStr);
+        new Thread(() -> {
+            try {
+                writer.println(request.toString());
+                String respuestaStr = reader.readLine();
+                JSONObject respuesta = new JSONObject(respuestaStr);
 
-            if (respuesta.getString("estado").equals("ok")) {
-                JSONArray habitaciones = respuesta.getJSONArray("habitaciones");
-                ObservableList<ModeloHabitacion> datos = FXCollections.observableArrayList();
+                Platform.runLater(() -> {
+                    try {
+                        if (respuesta.getString("estado").equals("ok")) {
+                            JSONArray habitaciones = respuesta.getJSONArray("habitaciones");
+                            ObservableList<ModeloHabitacion> datos = FXCollections.observableArrayList();
 
-                for (int i = 0; i < habitaciones.length(); i++) {
-                    JSONObject h = habitaciones.getJSONObject(i);
+                            for (int i = 0; i < habitaciones.length(); i++) {
+                                JSONObject h = habitaciones.getJSONObject(i);
 
-                    // Identificar la clave de identificación - podría ser "id", "ID", o "codigo"
-                    String idHabitacion = "";
-                    if (h.has("id")) {
-                        idHabitacion = h.getString("id");
-                    } else if (h.has("ID")) {
-                        idHabitacion = h.getString("ID");
-                    } else if (h.has("codigo")) {
-                        idHabitacion = h.getString("codigo");
-                    } else {
-                        // Si no encontramos un ID, generamos uno para evitar errores
-                        idHabitacion = UUID.randomUUID().toString().substring(0, 8);
+                                // Identificar la clave de identificación - podría ser "id", "ID", o "codigo"
+                                String idHabitacion = "";
+                                if (h.has("id")) {
+                                    idHabitacion = h.getString("id");
+                                } else if (h.has("ID")) {
+                                    idHabitacion = h.getString("ID");
+                                } else if (h.has("codigo")) {
+                                    idHabitacion = h.getString("codigo");
+                                } else {
+                                    // Si no encontramos un ID, generamos uno para evitar errores
+                                    idHabitacion = UUID.randomUUID().toString().substring(0, 8);
+                                }
+
+                                // Obtener el estilo y precio
+                                String estilo = h.has("estilo") ? h.getString("estilo") : "";
+                                double precio = h.has("precio") ? h.getDouble("precio") : 0.0;
+
+                                datos.add(new ModeloHabitacion(
+                                        idHabitacion,
+                                        estilo,
+                                        precio,
+                                        codigoHotel
+                                ));
+                            }
+
+                            tabla.setItems(datos);
+                        }
+                    } catch (Exception e) {
+                        mostrarNotificacion("Error al procesar datos: " + e.getMessage(), false);
                     }
-
-                    // Obtener el estilo y precio
-                    String estilo = h.has("estilo") ? h.getString("estilo") : "";
-                    double precio = h.has("precio") ? h.getDouble("precio") : 0.0;
-
-                    datos.add(new ModeloHabitacion(
-                            idHabitacion,
-                            estilo,
-                            precio,
-                            codigoHotel
-                    ));
-                }
-
-                tabla.setItems(datos);
+                });
+            } catch (IOException e) {
+                Platform.runLater(() -> {
+                    txtResultado.appendText("Error al cargar habitaciones: " + e.getMessage() + "\n");
+                });
             }
-        } catch (IOException e) {
-            txtResultado.appendText("Error al cargar habitaciones: " + e.getMessage() + "\n");
+        }).start();
+    }
+
+    private void modificarHabitacion(String id, String estilo, double precio, String codigoHotel) {
+        if (estilo.isEmpty()) {
+            mostrarNotificacion("Todos los campos son obligatorios.", false);
+            return;
+        }
+
+        JSONObject habitacion = new JSONObject();
+        habitacion.put("id", id);
+        habitacion.put("estilo", estilo);
+        habitacion.put("precio", precio);
+        habitacion.put("codigoHotel", codigoHotel);
+
+        JSONObject request = new JSONObject();
+        request.put("operacion", "modificarHabitacion");
+        request.put("habitacion", habitacion);
+
+        enviarPeticion(request);
+    }
+
+    private void eliminarHabitacion(String id, String codigoHotel, Tab tabOrigen) {
+        JSONObject request = new JSONObject();
+        request.put("operacion", "eliminarHabitacion");
+        request.put("id", id);
+        request.put("codigoHotel", codigoHotel); // Agregar código hotel para actualizar después
+
+        // Usar el método estándar con hilos
+        enviarPeticion(request);
+
+        // Si hay una pestaña específica abierta para edición, cerrarla
+        if (tabOrigen != null) {
+            Platform.runLater(() -> {
+                tabPane.getTabs().remove(tabOrigen);
+            });
+        }
+    }
+
+    private String obtenerNombreHotel(String codigo) {
+        // Buscar en las pestañas existentes
+        for (Tab tab : tabPane.getTabs()) {
+            if (tab.getText().startsWith("Habitaciones: ")) {
+                // El nombre del hotel está después de "Habitaciones: "
+                return tab.getText().substring(13);
+            }
+        }
+        return "Hotel";
+    }
+
+    private void confirmarBorradoHabitacion(ModeloHabitacion habitacion, Tab tabOrigen) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmar eliminar");
+        alert.setHeaderText("¿Está seguro que desea eliminar esta habitación?");
+        alert.setContentText("Habitación: " + habitacion.getEstilo());
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            eliminarHabitacion(habitacion.getId(), habitacion.getCodigoHotel(), tabOrigen);
         }
     }
 
@@ -540,29 +575,40 @@ public class MenuPrincipal {
     private void cargarDatosHoteles(TableView<ModeloHotel> tabla) {
         JSONObject request = new JSONObject();
         request.put("operacion", "listarHoteles");
-        try {
-            writer.println(request.toString());
-            String respuestaStr = reader.readLine();
-            JSONObject respuesta = new JSONObject(respuestaStr);
 
-            if (respuesta.getString("estado").equals("ok")) {
-                JSONArray hoteles = respuesta.getJSONArray("hoteles");
-                ObservableList<ModeloHotel> datos = FXCollections.observableArrayList();
+        new Thread(() -> {
+            try {
+                writer.println(request.toString());
+                String respuestaStr = reader.readLine();
+                JSONObject respuesta = new JSONObject(respuestaStr);
 
-                for (int i = 0; i < hoteles.length(); i++) {
-                    JSONObject hotel = hoteles.getJSONObject(i);
-                    datos.add(new ModeloHotel(
-                            hotel.getString("codigo"),
-                            hotel.getString("nombre"),
-                            hotel.getString("ubicacion")
-                    ));
-                }
+                Platform.runLater(() -> {
+                    try {
+                        if (respuesta.getString("estado").equals("ok")) {
+                            JSONArray hoteles = respuesta.getJSONArray("hoteles");
+                            ObservableList<ModeloHotel> datos = FXCollections.observableArrayList();
 
-                tabla.setItems(datos);
+                            for (int i = 0; i < hoteles.length(); i++) {
+                                JSONObject hotel = hoteles.getJSONObject(i);
+                                datos.add(new ModeloHotel(
+                                        hotel.getString("codigo"),
+                                        hotel.getString("nombre"),
+                                        hotel.getString("ubicacion")
+                                ));
+                            }
+
+                            tabla.setItems(datos);
+                        }
+                    } catch (Exception e) {
+                        mostrarNotificacion("Error al procesar datos de hoteles: " + e.getMessage(), false);
+                    }
+                });
+            } catch (IOException e) {
+                Platform.runLater(() -> {
+                    txtResultado.appendText("Error al listar hoteles: " + e.getMessage() + "\n");
+                });
             }
-        } catch (IOException e) {
-            txtResultado.appendText("Error al listar hoteles: " + e.getMessage() + "\n");
-        }
+        }).start();
     }
 
     private void cargarHabitacionesHotel(String codigoHotel, TableView<ModeloHabitacion> tabla) {
@@ -570,81 +616,91 @@ public class MenuPrincipal {
         request.put("operacion", "listarHabitaciones");
         request.put("codigoHotel", codigoHotel);
 
-        try {
-            writer.println(request.toString());
-            String respuestaStr = reader.readLine();
-            JSONObject respuesta = new JSONObject(respuestaStr);
+        new Thread(() -> {
+            try {
+                writer.println(request.toString());
+                String respuestaStr = reader.readLine();
+                JSONObject respuesta = new JSONObject(respuestaStr);
 
-            if (respuesta.getString("estado").equals("ok")) {
-                JSONArray habitaciones = respuesta.getJSONArray("habitaciones");
-                ObservableList<ModeloHabitacion> datos = FXCollections.observableArrayList();
+                Platform.runLater(() -> {
+                    try {
+                        if (respuesta.getString("estado").equals("ok")) {
+                            JSONArray habitaciones = respuesta.getJSONArray("habitaciones");
+                            ObservableList<ModeloHabitacion> datos = FXCollections.observableArrayList();
 
-                // Configurar columnas
-                tabla.getColumns().clear();
+                            // Configurar columnas
+                            tabla.getColumns().clear();
 
-                TableColumn<ModeloHabitacion, String> colId = new TableColumn<>("ID");
-                colId.setCellValueFactory(new PropertyValueFactory<>("id"));
+                            TableColumn<ModeloHabitacion, String> colId = new TableColumn<>("ID");
+                            colId.setCellValueFactory(new PropertyValueFactory<>("id"));
 
-                TableColumn<ModeloHabitacion, String> colEstilo = new TableColumn<>("Estilo");
-                colEstilo.setCellValueFactory(new PropertyValueFactory<>("estilo"));
+                            TableColumn<ModeloHabitacion, String> colEstilo = new TableColumn<>("Estilo");
+                            colEstilo.setCellValueFactory(new PropertyValueFactory<>("estilo"));
 
-                TableColumn<ModeloHabitacion, Double> colPrecio = new TableColumn<>("Precio");
-                colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
+                            TableColumn<ModeloHabitacion, Double> colPrecio = new TableColumn<>("Precio");
+                            colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
 
-                // Columna de acciones
-                TableColumn<ModeloHabitacion, Void> colAccion = new TableColumn<>("Acción");
-                colAccion.setCellFactory(param -> new TableCell<ModeloHabitacion, Void>() {
-                    private final HBox contenedor = new HBox(5);
-                    private final Button btnInfo = new Button("Info");
-                    private final Button btnEditar = new Button("Editar");
-                    private final Button btnBorrar = new Button("Borrar");
+                            // Columna de acciones
+                            TableColumn<ModeloHabitacion, Void> colAccion = new TableColumn<>("Acción");
+                            colAccion.setCellFactory(param -> new TableCell<ModeloHabitacion, Void>() {
+                                private final HBox contenedor = new HBox(5);
+                                private final Button btnInfo = new Button("Info");
+                                private final Button btnEditar = new Button("Editar");
+                                private final Button btnBorrar = new Button("Borrar");
 
-                    {
-                        btnInfo.getStyleClass().add("btn-info");
-                        btnInfo.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white;");
-                        btnInfo.setOnAction(e -> verDetalleHabitacion(getTableView().getItems().get(getIndex()), codigoHotel));
+                                {
+                                    btnInfo.getStyleClass().add("btn-info");
+                                    btnInfo.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white;");
+                                    btnInfo.setOnAction(e -> verDetalleHabitacion(getTableView().getItems().get(getIndex()), codigoHotel));
 
-                        btnEditar.getStyleClass().add("btn-edit");
-                        btnEditar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
-                        btnEditar.setOnAction(e -> editarHabitacion(getTableView().getItems().get(getIndex()), codigoHotel));
+                                    btnEditar.getStyleClass().add("btn-edit");
+                                    btnEditar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
+                                    btnEditar.setOnAction(e -> editarHabitacion(getTableView().getItems().get(getIndex()), codigoHotel));
 
-                        btnBorrar.getStyleClass().add("btn-delete");
-                        btnBorrar.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
-                        btnBorrar.setOnAction(e -> confirmarBorradoHabitacion(getTableView().getItems().get(getIndex())));
+                                    btnBorrar.getStyleClass().add("btn-delete");
+                                    btnBorrar.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
+                                    btnBorrar.setOnAction(e -> confirmarBorradoHabitacion(getTableView().getItems().get(getIndex()), null));
 
-                        contenedor.getChildren().addAll(btnInfo, btnEditar, btnBorrar);
-                        contenedor.setAlignment(Pos.CENTER);
-                    }
+                                    contenedor.getChildren().addAll(btnInfo, btnEditar, btnBorrar);
+                                    contenedor.setAlignment(Pos.CENTER);
+                                }
 
-                    @Override
-                    protected void updateItem(Void item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty) {
-                            setGraphic(null);
-                        } else {
-                            setGraphic(contenedor);
+                                @Override
+                                protected void updateItem(Void item, boolean empty) {
+                                    super.updateItem(item, empty);
+                                    if (empty) {
+                                        setGraphic(null);
+                                    } else {
+                                        setGraphic(contenedor);
+                                    }
+                                }
+                            });
+
+                            tabla.getColumns().addAll(colId, colEstilo, colPrecio, colAccion);
+
+                            // Añadir datos
+                            for (int i = 0; i < habitaciones.length(); i++) {
+                                JSONObject h = habitaciones.getJSONObject(i);
+                                datos.add(new ModeloHabitacion(
+                                        h.getString("id"),
+                                        h.getString("estilo"),
+                                        h.getDouble("precio"),
+                                        codigoHotel
+                                ));
+                            }
+
+                            tabla.setItems(datos);
                         }
+                    } catch (Exception e) {
+                        mostrarNotificacion("Error al procesar datos de habitaciones: " + e.getMessage(), false);
                     }
                 });
-
-                tabla.getColumns().addAll(colId, colEstilo, colPrecio, colAccion);
-
-                // Añadir datos
-                for (int i = 0; i < habitaciones.length(); i++) {
-                    JSONObject h = habitaciones.getJSONObject(i);
-                    datos.add(new ModeloHabitacion(
-                            h.getString("id"),
-                            h.getString("estilo"),
-                            h.getDouble("precio"),
-                            codigoHotel
-                    ));
-                }
-
-                tabla.setItems(datos);
+            } catch (IOException e) {
+                Platform.runLater(() -> {
+                    txtResultado.appendText("Error al cargar habitaciones: " + e.getMessage() + "\n");
+                });
             }
-        } catch (IOException e) {
-            txtResultado.appendText("Error al cargar habitaciones: " + e.getMessage() + "\n");
-        }
+        }).start();
     }
 
     private void verDetalleHabitacion(ModeloHabitacion habitacion, String codigoHotel) {
@@ -727,20 +783,14 @@ public class MenuPrincipal {
         btnGuardar.setOnAction(e -> {
             try {
                 double precio = Double.parseDouble(txtPrecio.getText().trim());
-                habitacion.setEstilo(txtEstilo.getText().trim());
-                habitacion.setPrecio(precio);
+                String estilo = txtEstilo.getText().trim();
 
-                JSONObject request = new JSONObject();
-                JSONObject hab = new JSONObject();
-                hab.put("id", habitacion.getId());
-                hab.put("estilo", habitacion.getEstilo());
-                hab.put("precio", habitacion.getPrecio());
-                hab.put("codigoHotel", habitacion.getCodigoHotel());
+                if (estilo.isEmpty()) {
+                    mostrarNotificacion("El campo estilo no puede estar vacío", false);
+                    return;
+                }
 
-                request.put("operacion", "modificarHabitacion");
-                request.put("habitacion", hab);
-
-                enviarPeticion(request);
+                modificarHabitacion(habitacion.getId(), estilo, precio, codigoHotel);
                 tabPane.getTabs().remove(tabEditar);
 
             } catch (NumberFormatException ex) {
@@ -757,39 +807,6 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabEditar);
     }
 
-    private void confirmarBorradoHabitacion(ModeloHabitacion habitacion) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmar eliminar");
-        alert.setHeaderText("¿Está seguro que desea eliminar esta habitación?");
-        alert.setContentText("Habitación ID: " + habitacion.getId());
-
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            JSONObject request = new JSONObject();
-            request.put("operacion", "eliminarHabitacion");
-            request.put("id", habitacion.getId());
-
-            enviarPeticion(request);
-            // Actualizar la vista
-            for (Tab tab : tabPane.getTabs()) {
-                if (tab.getText().startsWith("Info: ") && tab.getText().contains(habitacion.getCodigoHotel())) {
-                    Node content = tab.getContent();
-                    if (content instanceof VBox) {
-                        for (Node node : ((VBox) content).getChildren()) {
-                            if (node instanceof TableView) {
-                                @SuppressWarnings("unchecked")
-                                TableView<ModeloHabitacion> tabla = (TableView<ModeloHabitacion>) node;
-                                cargarHabitacionesHotel(habitacion.getCodigoHotel(), tabla);
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
     private void conectar() {
         try {
             Socket socket = new Socket("localhost", 9999);
@@ -801,27 +818,40 @@ public class MenuPrincipal {
     }
 
     private void enviarPeticion(JSONObject request) {
-        try {
-            writer.println(request.toString());
-            String respuestaStr = reader.readLine();
-            JSONObject respuesta = new JSONObject(respuestaStr);
+        new Thread(() -> {
+            try {
+                // Realizar operación de red en hilo separado
+                writer.println(request.toString());
+                String respuestaStr = reader.readLine();
+                JSONObject respuesta = new JSONObject(respuestaStr);
 
-            if (respuesta.getString("estado").equals("ok")) {
-                mostrarNotificacion("✔ " + respuesta.getString("mensaje"), true);
+                // Actualizar la interfaz en el hilo de UI
+                Platform.runLater(() -> {
+                    if (respuesta.getString("estado").equals("ok")) {
+                        mostrarNotificacion("✔ " + respuesta.getString("mensaje"), true);
 
-                // Actualizar datos si es necesario
-                if (request.getString("operacion").contains("Hotel")) {
-                    actualizarTablasHoteles();
-                } else if (request.getString("operacion").contains("Habitacion")) {
-                    // Aquí podríamos tener lógica para actualizar las tablas de habitaciones
-                }
-            } else {
-                mostrarNotificacion("✘ Error: " + respuesta.getString("mensaje"), false);
+                        // Actualizar datos si es necesario
+                        if (request.getString("operacion").contains("Hotel")) {
+                            actualizarTablasHoteles();
+                        } else if (request.getString("operacion").contains("Habitacion")) {
+                            // Si es una operación de habitación, actualizar tablas correspondientes
+                            if (request.has("habitacion") && request.getJSONObject("habitacion").has("codigoHotel")) {
+                                actualizarTablasHabitaciones(request.getJSONObject("habitacion").getString("codigoHotel"));
+                            } else if (request.has("codigoHotel")) {
+                                actualizarTablasHabitaciones(request.getString("codigoHotel"));
+                            }
+                        }
+                    } else {
+                        mostrarNotificacion("✘ Error: " + respuesta.getString("mensaje"), false);
+                    }
+                });
+            } catch (IOException e) {
+                // Mostrar error en el hilo de UI
+                Platform.runLater(() -> {
+                    mostrarNotificacion("Error de comunicación: " + e.getMessage(), false);
+                });
             }
-
-        } catch (IOException e) {
-            mostrarNotificacion("Error de comunicación: " + e.getMessage(), false);
-        }
+        }).start();
     }
 
     private void actualizarTablasHoteles() {
@@ -838,6 +868,27 @@ public class MenuPrincipal {
                     }
                 }
                 break;
+            }
+        }
+    }
+
+    private void actualizarTablasHabitaciones(String codigoHotel) {
+        // Actualizar todas las tablas de habitaciones para este hotel
+        for (Tab tab : tabPane.getTabs()) {
+            if (tab.getText().contains("Habitaciones: ")) {
+                Platform.runLater(() -> {
+                    Node content = tab.getContent();
+                    if (content instanceof VBox) {
+                        for (Node node : ((VBox) content).getChildren()) {
+                            if (node instanceof TableView) {
+                                @SuppressWarnings("unchecked")
+                                TableView<ModeloHabitacion> tabla = (TableView<ModeloHabitacion>) node;
+                                cargarHabitacionesSimples(codigoHotel, tabla);
+                                break;
+                            }
+                        }
+                    }
+                });
             }
         }
     }
@@ -900,6 +951,4 @@ public class MenuPrincipal {
         public String getCodigoHotel() { return codigoHotel; }
         public void setCodigoHotel(String codigoHotel) { this.codigoHotel = codigoHotel; }
     }
-
-
 }

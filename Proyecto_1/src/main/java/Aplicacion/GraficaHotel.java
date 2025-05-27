@@ -37,7 +37,7 @@ public class GraficaHotel {
         Button btnRegistrar = new Button("Registrar");
         btnRegistrar.setOnAction(e -> registrarHotel());
 
-        Button btnListar = new Button("Buscar");
+        Button btnListar = new Button("Listar Hoteles");
         btnListar.setOnAction(e -> listarHoteles());
 
         Button btnModificar = new Button("Modificar");
@@ -45,6 +45,9 @@ public class GraficaHotel {
 
         Button btnEliminar = new Button("Eliminar");
         btnEliminar.setOnAction(e -> eliminarHotel());
+
+        Button btnBuscar = new Button("Buscar");
+        btnBuscar.setOnAction(e -> buscarHotel());
 
         txtResultado = new TextArea();
         txtResultado.setEditable(false);
@@ -62,7 +65,8 @@ public class GraficaHotel {
         grid.add(btnModificar, 1, 3);
         grid.add(btnEliminar, 0, 4);
         grid.add(btnListar, 1, 4);
-        grid.add(txtResultado, 0, 5, 2, 1);
+        grid.add(btnBuscar, 0, 5);
+        grid.add(txtResultado, 0, 6, 2, 1);
 
         return grid;
     }
@@ -74,6 +78,7 @@ public class GraficaHotel {
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         } catch (IOException e) {
             if (txtResultado != null) {
+                txtResultado.clear();
                 txtResultado.appendText("Error al conectar al servidor: " + e.getMessage() + "\n");
             }
         }
@@ -84,6 +89,7 @@ public class GraficaHotel {
         String ubicacion = txtUbicacion.getText().trim();
 
         if (nombre.isEmpty() || ubicacion.isEmpty()) {
+            txtResultado.clear();
             txtResultado.appendText("Campos nombre y ubicación obligatorios.\n");
             return;
         }
@@ -109,9 +115,11 @@ public class GraficaHotel {
 
             if (respuesta.getString("estado").equals("ok")) {
                 JSONArray hoteles = respuesta.getJSONArray("hoteles");
+                txtResultado.clear();
                 txtResultado.appendText("Lista de Hoteles:\n");
                 for (int i = 0; i < hoteles.length(); i++) {
                     JSONObject hotel = hoteles.getJSONObject(i);
+
                     txtResultado.appendText(
                             hotel.getString("codigo") + " - " +
                                     hotel.getString("nombre") + " (" +
@@ -146,12 +154,69 @@ public class GraficaHotel {
         request.put("operacion", "modificarHotel");
         request.put("hotel", hotel);
 
-        enviarPeticionYMostrarRespuesta(request);
+        try {
+            writer.println(request.toString());
+            String respuestaString = reader.readLine();
+            JSONObject respuesta = new JSONObject(respuestaString);
+
+            if (respuesta.getString("estado").equals("ok")) {
+                txtResultado.clear();
+                txtResultado.appendText("✔ Hotel actualizado correctamente.\n");
+                txtCodigo.clear();
+                txtNombre.clear();
+                txtUbicacion.clear();
+            } else {
+                txtResultado.clear();
+                txtResultado.appendText("✘ Error: " + respuesta.getString("mensaje") + "\n");
+            }
+        } catch (IOException e) {
+            txtResultado.clear();
+            txtResultado.appendText("Error de comunicación: " + e.getMessage() + "\n");
+        }
+    }
+
+    private void buscarHotel() {
+        String codigo = txtCodigo.getText().trim();
+
+        if (codigo.isEmpty()) {
+            txtResultado.appendText("Debe ingresar el código del hotel a buscar.\n");
+            return;
+        }
+
+        JSONObject request = new JSONObject();
+        request.put("operacion", "buscarHotel");
+        request.put("codigo", codigo);
+
+        try {
+            writer.println(request.toString());
+            String respuestaString = reader.readLine();
+            JSONObject respuesta = new JSONObject(respuestaString);
+
+            if (respuesta.getString("estado").equals("ok")) {
+                JSONObject hotel = respuesta.getJSONObject("hotel");
+
+                //mostrar datos en los campos
+                txtNombre.setText(hotel.getString("nombre"));
+                txtUbicacion.setText(hotel.getString("ubicacion"));
+
+                txtResultado.clear();
+                txtResultado.appendText("✔ Hotel encontrado:\n");
+                txtResultado.appendText("Nombre: " + hotel.getString("nombre") + "\n");
+                txtResultado.appendText("Ubicación: " + hotel.getString("ubicacion") + "\n");
+            } else {
+                txtResultado.clear();
+                txtResultado.appendText("✘ Error: " + respuesta.getString("mensaje") + "\n");
+            }
+        } catch (IOException e) {
+            txtResultado.clear();
+            txtResultado.appendText("Error de comunicación: " + e.getMessage() + "\n");
+        }
     }
 
     private void eliminarHotel() {
         String codigo = txtCodigo.getText().trim();
         if (codigo.isEmpty()) {
+            txtResultado.clear();
             txtResultado.appendText("Debe ingresar el código del hotel a eliminar.\n");
             return;
         }
@@ -170,15 +235,18 @@ public class GraficaHotel {
             JSONObject respuesta = new JSONObject(respuestaStr);
 
             if (respuesta.getString("estado").equals("ok")) {
+                txtResultado.clear();
                 txtResultado.appendText("✔ " + respuesta.getString("mensaje") + "\n");
                 txtCodigo.clear();
                 txtNombre.clear();
                 txtUbicacion.clear();
             } else {
+                txtResultado.clear();
                 txtResultado.appendText("✘ Error: " + respuesta.getString("mensaje") + "\n");
             }
 
         } catch (IOException e) {
+            txtResultado.clear();
             txtResultado.appendText("Error de comunicación: " + e.getMessage() + "\n");
         }
     }
@@ -189,6 +257,7 @@ public class GraficaHotel {
             if (reader != null) reader.close();
             if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException e) {
+            txtResultado.clear();
             txtResultado.appendText("Error cerrando conexión: " + e.getMessage());
         }
     }

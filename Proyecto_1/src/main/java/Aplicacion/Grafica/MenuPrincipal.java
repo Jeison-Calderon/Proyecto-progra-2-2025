@@ -8,16 +8,13 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import javafx.util.Callback;
 import javafx.scene.Node;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.Optional;
-import java.util.UUID;
 
 public class MenuPrincipal {
 
@@ -51,7 +48,6 @@ public class MenuPrincipal {
             double precio = Double.parseDouble(precioStr);
 
             JSONObject habitacion = new JSONObject();
-            habitacion.put("id", UUID.randomUUID().toString().substring(0, 8));
             habitacion.put("estilo", estilo);
             habitacion.put("precio", precio);
             habitacion.put("codigoHotel", codigoHotel);
@@ -69,7 +65,6 @@ public class MenuPrincipal {
     }
 
     private void verHabitacionesHotel(ModeloHotel hotel) {
-        // Crear una nueva pestaña para las habitaciones del hotel
         Tab tabHabitaciones = new Tab("Habitaciones: " + hotel.getNombre());
         tabHabitaciones.setClosable(true);
 
@@ -79,21 +74,16 @@ public class MenuPrincipal {
         Label lblTitulo = new Label("Habitaciones del Hotel: " + hotel.getNombre());
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-        // Tabla simple con solo estilo y precio
         TableView<ModeloHabitacion> tablaHabitaciones = new TableView<>();
         tablaHabitaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Definir solo las columnas necesarias
         TableColumn<ModeloHabitacion, String> colEstilo = new TableColumn<>("estilo");
         colEstilo.setCellValueFactory(new PropertyValueFactory<>("estilo"));
-
         TableColumn<ModeloHabitacion, Double> colPrecio = new TableColumn<>("precio");
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
 
-        // Añadir las columnas a la tabla
         tablaHabitaciones.getColumns().addAll(colEstilo, colPrecio);
 
-        // Agregar el menú contextual
         ContextMenu menuContextual = new ContextMenu();
         MenuItem itemRegistrar = new MenuItem("Registrar habitación");
         MenuItem itemEditar = new MenuItem("Editar precio");
@@ -102,16 +92,13 @@ public class MenuPrincipal {
         menuContextual.getItems().addAll(itemRegistrar, itemEditar, itemBorrar);
         tablaHabitaciones.setContextMenu(menuContextual);
 
-        // Configurar acciones de menú contextual
         itemRegistrar.setOnAction(e -> registrarHabitacion(hotel.getCodigo(), tablaHabitaciones));
-
         itemEditar.setOnAction(e -> {
             ModeloHabitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
                 editarHabitacion(habitacionSeleccionada, hotel.getCodigo());
             }
         });
-
         itemBorrar.setOnAction(e -> {
             ModeloHabitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
@@ -119,10 +106,8 @@ public class MenuPrincipal {
             }
         });
 
-        // Cargar datos de habitaciones
         cargarHabitacionesSimples(hotel.getCodigo(), tablaHabitaciones);
 
-        // Botón para volver
         Button btnVolver = new Button("Volver a lista de hoteles");
         btnVolver.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
         btnVolver.setOnAction(e -> tabPane.getSelectionModel().selectFirst());
@@ -134,7 +119,6 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabHabitaciones);
     }
 
-    // Método para cargar solo las columnas estilo y precio
     private void cargarHabitacionesSimples(String codigoHotel, TableView<ModeloHabitacion> tabla) {
         JSONObject request = new JSONObject();
         request.put("operacion", "listarHabitaciones");
@@ -155,25 +139,12 @@ public class MenuPrincipal {
                             for (int i = 0; i < habitaciones.length(); i++) {
                                 JSONObject h = habitaciones.getJSONObject(i);
 
-                                // Identificar la clave de identificación - podría ser "id", "ID", o "codigo"
-                                String idHabitacion = "";
-                                if (h.has("id")) {
-                                    idHabitacion = h.getString("id");
-                                } else if (h.has("ID")) {
-                                    idHabitacion = h.getString("ID");
-                                } else if (h.has("codigo")) {
-                                    idHabitacion = h.getString("codigo");
-                                } else {
-                                    // Si no encontramos un ID, generamos uno para evitar errores
-                                    idHabitacion = UUID.randomUUID().toString().substring(0, 8);
-                                }
-
-                                // Obtener el estilo y precio
+                                String codigoHabitacion = h.has("codigo") ? h.getString("codigo") : "";
                                 String estilo = h.has("estilo") ? h.getString("estilo") : "";
                                 double precio = h.has("precio") ? h.getDouble("precio") : 0.0;
 
                                 datos.add(new ModeloHabitacion(
-                                        idHabitacion,
+                                        codigoHabitacion,
                                         estilo,
                                         precio,
                                         codigoHotel
@@ -194,14 +165,13 @@ public class MenuPrincipal {
         }).start();
     }
 
-    private void modificarHabitacion(String id, String estilo, double precio, String codigoHotel) {
+    private void modificarHabitacion(String codigo, String estilo, double precio, String codigoHotel) {
         if (estilo.isEmpty()) {
             mostrarNotificacion("Todos los campos son obligatorios.", false);
             return;
         }
-
         JSONObject habitacion = new JSONObject();
-        habitacion.put("id", id);
+        habitacion.put("codigo", codigo);
         habitacion.put("estilo", estilo);
         habitacion.put("precio", precio);
         habitacion.put("codigoHotel", codigoHotel);
@@ -213,16 +183,14 @@ public class MenuPrincipal {
         enviarPeticion(request);
     }
 
-    private void eliminarHabitacion(String id, String codigoHotel, Tab tabOrigen) {
+    private void eliminarHabitacion(String codigo, String codigoHotel, Tab tabOrigen) {
         JSONObject request = new JSONObject();
         request.put("operacion", "eliminarHabitacion");
-        request.put("id", id);
-        request.put("codigoHotel", codigoHotel); // Agregar código hotel para actualizar después
+        request.put("codigo", codigo);
+        request.put("codigoHotel", codigoHotel);
 
-        // Usar el método estándar con hilos
         enviarPeticion(request);
 
-        // Si hay una pestaña específica abierta para edición, cerrarla
         if (tabOrigen != null) {
             Platform.runLater(() -> {
                 tabPane.getTabs().remove(tabOrigen);
@@ -231,10 +199,8 @@ public class MenuPrincipal {
     }
 
     private String obtenerNombreHotel(String codigo) {
-        // Buscar en las pestañas existentes
         for (Tab tab : tabPane.getTabs()) {
             if (tab.getText().startsWith("Habitaciones: ")) {
-                // El nombre del hotel está después de "Habitaciones: "
                 return tab.getText().substring(13);
             }
         }
@@ -249,7 +215,7 @@ public class MenuPrincipal {
 
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            eliminarHabitacion(habitacion.getId(), habitacion.getCodigoHotel(), tabOrigen);
+            eliminarHabitacion(habitacion.getCodigo(), habitacion.getCodigoHotel(), tabOrigen);
         }
     }
 
@@ -259,25 +225,21 @@ public class MenuPrincipal {
         root = new BorderPane();
         tabPane = new TabPane();
 
-        // Crear tab para gestión de hoteles
         Tab tabHoteles = new Tab("Gestión de Hoteles");
         tabHoteles.setClosable(false);
 
-        // Crear la vista de listado de hoteles
         VBox vistaHoteles = crearVistaListadoHoteles();
         tabHoteles.setContent(vistaHoteles);
 
         tabPane.getTabs().add(tabHoteles);
         root.setCenter(tabPane);
 
-        // Área de notificaciones
         txtResultado = new TextArea();
         txtResultado.setEditable(false);
         txtResultado.setWrapText(true);
         txtResultado.setPrefHeight(80);
         txtResultado.setStyle("-fx-control-inner-background: #f8f9fa;");
 
-        // Añadir un encabezado a la ventana
         Label lblHeader = new Label("Sistema de Gestión de Hoteles");
         lblHeader.getStyleClass().add("header-label");
         BorderPane header = new BorderPane();
@@ -300,13 +262,11 @@ public class MenuPrincipal {
         lblTitulo.getStyleClass().add("section-header");
         lblTitulo.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        // Botón para crear nuevo hotel
         Button btnNuevoHotel = new Button("Crear Nuevo Hotel");
         btnNuevoHotel.getStyleClass().add("btn-primary");
         btnNuevoHotel.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
         btnNuevoHotel.setOnAction(e -> mostrarFormularioNuevoHotel());
 
-        // Área de notificación para resultados de operaciones
         VBox areaNotificacion = new VBox();
         areaNotificacion.setVisible(false);
         areaNotificacion.getStyleClass().add("notification");
@@ -317,11 +277,9 @@ public class MenuPrincipal {
         lblMensajeNotificacion.setStyle("-fx-text-fill: #155724;");
         areaNotificacion.getChildren().add(lblMensajeNotificacion);
 
-        // Crear tabla para listar hoteles
         TableView<ModeloHotel> tablaHoteles = new TableView<>();
         tablaHoteles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Columnas
         TableColumn<ModeloHotel, String> colCodigo = new TableColumn<>("ID");
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
 
@@ -331,7 +289,6 @@ public class MenuPrincipal {
         TableColumn<ModeloHotel, String> colUbicacion = new TableColumn<>("Ubicación");
         colUbicacion.setCellValueFactory(new PropertyValueFactory<>("ubicacion"));
 
-        // Columna de acciones
         TableColumn<ModeloHotel, Void> colAccion = new TableColumn<>("Acción");
         colAccion.setCellFactory(param -> new TableCell<ModeloHotel, Void>() {
             private final HBox contenedor = new HBox(5);
@@ -340,7 +297,6 @@ public class MenuPrincipal {
             private final Button btnBorrar = new Button("Borrar");
 
             {
-                // Estilos para los botones
                 btnInfo.getStyleClass().add("btn-info");
                 btnInfo.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white;");
                 btnInfo.setOnAction(e -> verHabitacionesHotel(getTableView().getItems().get(getIndex())));
@@ -370,7 +326,6 @@ public class MenuPrincipal {
 
         tablaHoteles.getColumns().addAll(colCodigo, colNombre, colUbicacion, colAccion);
 
-        // Cargar datos de hoteles
         cargarDatosHoteles(tablaHoteles);
 
         contenedor.getChildren().addAll(lblTitulo, btnNuevoHotel, areaNotificacion, tablaHoteles);
@@ -378,17 +333,14 @@ public class MenuPrincipal {
     }
 
     private void mostrarFormularioNuevoHotel() {
-        // Crear un diálogo para el formulario
         Dialog<ModeloHotel> dialog = new Dialog<>();
         dialog.setTitle("Crear Nuevo Hotel");
         dialog.setHeaderText("Ingrese los datos del nuevo hotel");
 
-        // Botones
         ButtonType btnGuardar = new ButtonType("Guardar", ButtonBar.ButtonData.OK_DONE);
         ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().addAll(btnGuardar, btnCancelar);
 
-        // Crear el grid para el formulario
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
@@ -404,7 +356,6 @@ public class MenuPrincipal {
 
         dialog.getDialogPane().setContent(grid);
 
-        // Convertir el resultado del diálogo cuando se presione Guardar
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == btnGuardar) {
                 return new ModeloHotel("", txtNombre.getText(), txtUbicacion.getText());
@@ -437,7 +388,6 @@ public class MenuPrincipal {
     }
 
     private void verDetalleHotel(ModeloHotel hotel) {
-        // Crear una nueva pestaña para los detalles del hotel
         Tab tabDetalle = new Tab("Info: " + hotel.getNombre());
         tabDetalle.setClosable(true);
 
@@ -453,7 +403,6 @@ public class MenuPrincipal {
         grid.setPadding(new Insets(20));
         grid.setStyle("-fx-border-color: #dee2e6; -fx-border-width: 1px;");
 
-        // Añadir información del hotel
         grid.add(new Label("Nombre:"), 0, 0);
         grid.add(new Label(hotel.getNombre()), 1, 0);
 
@@ -463,16 +412,13 @@ public class MenuPrincipal {
         grid.add(new Label("Ubicación:"), 0, 2);
         grid.add(new Label(hotel.getUbicacion()), 1, 2);
 
-        // Botón para volver
         Button btnVolver = new Button("Volver a lista de hoteles");
         btnVolver.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
         btnVolver.setOnAction(e -> tabPane.getSelectionModel().selectFirst());
 
-        // Subtitulo para habitaciones
         Label lblHabitaciones = new Label("Habitaciones del Hotel");
         lblHabitaciones.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        // Tabla para mostrar habitaciones
         TableView<ModeloHabitacion> tablaHabitaciones = new TableView<>();
         cargarHabitacionesHotel(hotel.getCodigo(), tablaHabitaciones);
 
@@ -484,7 +430,6 @@ public class MenuPrincipal {
     }
 
     private void editarHotel(ModeloHotel hotel) {
-        // Crear una nueva pestaña para editar el hotel
         Tab tabEditar = new Tab("Editar: " + hotel.getNombre());
         tabEditar.setClosable(true);
 
@@ -628,11 +573,10 @@ public class MenuPrincipal {
                             JSONArray habitaciones = respuesta.getJSONArray("habitaciones");
                             ObservableList<ModeloHabitacion> datos = FXCollections.observableArrayList();
 
-                            // Configurar columnas
                             tabla.getColumns().clear();
 
-                            TableColumn<ModeloHabitacion, String> colId = new TableColumn<>("ID");
-                            colId.setCellValueFactory(new PropertyValueFactory<>("id"));
+                            TableColumn<ModeloHabitacion, String> colCodigo = new TableColumn<>("ID");
+                            colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
 
                             TableColumn<ModeloHabitacion, String> colEstilo = new TableColumn<>("Estilo");
                             colEstilo.setCellValueFactory(new PropertyValueFactory<>("estilo"));
@@ -640,7 +584,6 @@ public class MenuPrincipal {
                             TableColumn<ModeloHabitacion, Double> colPrecio = new TableColumn<>("Precio");
                             colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
 
-                            // Columna de acciones
                             TableColumn<ModeloHabitacion, Void> colAccion = new TableColumn<>("Acción");
                             colAccion.setCellFactory(param -> new TableCell<ModeloHabitacion, Void>() {
                                 private final HBox contenedor = new HBox(5);
@@ -676,13 +619,12 @@ public class MenuPrincipal {
                                 }
                             });
 
-                            tabla.getColumns().addAll(colId, colEstilo, colPrecio, colAccion);
+                            tabla.getColumns().addAll(colCodigo, colEstilo, colPrecio, colAccion);
 
-                            // Añadir datos
                             for (int i = 0; i < habitaciones.length(); i++) {
                                 JSONObject h = habitaciones.getJSONObject(i);
                                 datos.add(new ModeloHabitacion(
-                                        h.getString("id"),
+                                        h.getString("codigo"),
                                         h.getString("estilo"),
                                         h.getDouble("precio"),
                                         codigoHotel
@@ -704,8 +646,7 @@ public class MenuPrincipal {
     }
 
     private void verDetalleHabitacion(ModeloHabitacion habitacion, String codigoHotel) {
-        // Crear una nueva pestaña para los detalles de la habitación
-        Tab tabDetalle = new Tab("Info: Habitación " + habitacion.getId());
+        Tab tabDetalle = new Tab("Info: Habitación " + habitacion.getCodigo());
         tabDetalle.setClosable(true);
 
         VBox contenedor = new VBox(15);
@@ -721,7 +662,7 @@ public class MenuPrincipal {
         grid.setStyle("-fx-border-color: #dee2e6; -fx-border-width: 1px;");
 
         grid.add(new Label("ID:"), 0, 0);
-        grid.add(new Label(habitacion.getId()), 1, 0);
+        grid.add(new Label(habitacion.getCodigo()), 1, 0);
 
         grid.add(new Label("Estilo:"), 0, 1);
         grid.add(new Label(habitacion.getEstilo()), 1, 1);
@@ -744,8 +685,7 @@ public class MenuPrincipal {
     }
 
     private void editarHabitacion(ModeloHabitacion habitacion, String codigoHotel) {
-        // Crear una nueva pestaña para editar la habitación
-        Tab tabEditar = new Tab("Editar: Habitación " + habitacion.getId());
+        Tab tabEditar = new Tab("Editar: Habitación " + habitacion.getCodigo());
         tabEditar.setClosable(true);
 
         VBox contenedor = new VBox(15);
@@ -763,7 +703,7 @@ public class MenuPrincipal {
         TextField txtPrecio = new TextField(String.valueOf(habitacion.getPrecio()));
 
         grid.add(new Label("ID:"), 0, 0);
-        grid.add(new Label(habitacion.getId()), 1, 0);
+        grid.add(new Label(habitacion.getCodigo()), 1, 0);
 
         grid.add(new Label("Estilo:"), 0, 1);
         grid.add(txtEstilo, 1, 1);
@@ -790,7 +730,7 @@ public class MenuPrincipal {
                     return;
                 }
 
-                modificarHabitacion(habitacion.getId(), estilo, precio, codigoHotel);
+                modificarHabitacion(habitacion.getCodigo(), estilo, precio, codigoHotel);
                 tabPane.getTabs().remove(tabEditar);
 
             } catch (NumberFormatException ex) {
@@ -820,21 +760,17 @@ public class MenuPrincipal {
     private void enviarPeticion(JSONObject request) {
         new Thread(() -> {
             try {
-                // Realizar operación de red en hilo separado
                 writer.println(request.toString());
                 String respuestaStr = reader.readLine();
                 JSONObject respuesta = new JSONObject(respuestaStr);
 
-                // Actualizar la interfaz en el hilo de UI
                 Platform.runLater(() -> {
                     if (respuesta.getString("estado").equals("ok")) {
                         mostrarNotificacion("✔ " + respuesta.getString("mensaje"), true);
 
-                        // Actualizar datos si es necesario
                         if (request.getString("operacion").contains("Hotel")) {
                             actualizarTablasHoteles();
                         } else if (request.getString("operacion").contains("Habitacion")) {
-                            // Si es una operación de habitación, actualizar tablas correspondientes
                             if (request.has("habitacion") && request.getJSONObject("habitacion").has("codigoHotel")) {
                                 actualizarTablasHabitaciones(request.getJSONObject("habitacion").getString("codigoHotel"));
                             } else if (request.has("codigoHotel")) {
@@ -846,7 +782,6 @@ public class MenuPrincipal {
                     }
                 });
             } catch (IOException e) {
-                // Mostrar error en el hilo de UI
                 Platform.runLater(() -> {
                     mostrarNotificacion("Error de comunicación: " + e.getMessage(), false);
                 });
@@ -855,7 +790,6 @@ public class MenuPrincipal {
     }
 
     private void actualizarTablasHoteles() {
-        // Buscar la tab de hoteles y actualizar sus tablas
         for (Tab tab : tabPane.getTabs()) {
             if (tab.getText().equals("Gestión de Hoteles")) {
                 VBox content = (VBox) tab.getContent();
@@ -873,7 +807,6 @@ public class MenuPrincipal {
     }
 
     private void actualizarTablasHabitaciones(String codigoHotel) {
-        // Actualizar todas las tablas de habitaciones para este hotel
         for (Tab tab : tabPane.getTabs()) {
             if (tab.getText().contains("Habitaciones: ")) {
                 Platform.runLater(() -> {
@@ -904,7 +837,6 @@ public class MenuPrincipal {
         }
     }
 
-    // Clases de modelo
     public static class ModeloHotel {
         private String codigo;
         private String nombre;
@@ -918,36 +850,32 @@ public class MenuPrincipal {
 
         public String getCodigo() { return codigo; }
         public void setCodigo(String codigo) { this.codigo = codigo; }
-
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
-
         public String getUbicacion() { return ubicacion; }
         public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     }
 
+    // Cambiado "id" por "codigo" para el identificador único
     public static class ModeloHabitacion {
-        private String id;
+        private String codigo;
         private String estilo;
         private double precio;
         private String codigoHotel;
 
-        public ModeloHabitacion(String id, String estilo, double precio, String codigoHotel) {
-            this.id = id;
+        public ModeloHabitacion(String codigo, String estilo, double precio, String codigoHotel) {
+            this.codigo = codigo;
             this.estilo = estilo;
             this.precio = precio;
             this.codigoHotel = codigoHotel;
         }
 
-        public String getId() { return id; }
-        public void setId(String id) { this.id = id; }
-
+        public String getCodigo() { return codigo; }
+        public void setCodigo(String codigo) { this.codigo = codigo; }
         public String getEstilo() { return estilo; }
         public void setEstilo(String estilo) { this.estilo = estilo; }
-
         public double getPrecio() { return precio; }
         public void setPrecio(double precio) { this.precio = precio; }
-
         public String getCodigoHotel() { return codigoHotel; }
         public void setCodigoHotel(String codigoHotel) { this.codigoHotel = codigoHotel; }
     }

@@ -1,4 +1,4 @@
-package Aplicacion;
+package Aplicacion.Grafica;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.*;

@@ -4,4 +4,5 @@ module org.example.proyecto_1 {
     requires org.json;
 
     exports Aplicacion;
+    exports Aplicacion.Grafica;
 }

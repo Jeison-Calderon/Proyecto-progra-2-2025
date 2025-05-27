@@ -74,6 +74,14 @@ public class MenuPrincipal {
         Label lblTitulo = new Label("Habitaciones del Hotel: " + hotel.getNombre());
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
+        // Búsqueda habitaciones
+        HBox boxBusqueda = new HBox(10);
+        TextField txtBuscar = new TextField();
+        txtBuscar.setPromptText("Buscar habitación por estilo o precio...");
+        Button btnBuscar = new Button("Buscar");
+        btnBuscar.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
+        boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar);
+
         TableView<ModeloHabitacion> tablaHabitaciones = new TableView<>();
         tablaHabitaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -108,11 +116,29 @@ public class MenuPrincipal {
 
         cargarHabitacionesSimples(hotel.getCodigo(), tablaHabitaciones);
 
+        // Acción buscar habitaciones
+        btnBuscar.setOnAction(e -> {
+            String query = txtBuscar.getText().trim().toLowerCase();
+            if (query.isEmpty()) {
+                cargarHabitacionesSimples(hotel.getCodigo(), tablaHabitaciones);
+            } else {
+                ObservableList<ModeloHabitacion> items = tablaHabitaciones.getItems();
+                ObservableList<ModeloHabitacion> filtrados = FXCollections.observableArrayList();
+                for (ModeloHabitacion hab : items) {
+                    if (hab.getEstilo().toLowerCase().contains(query)
+                            || String.valueOf(hab.getPrecio()).contains(query)) {
+                        filtrados.add(hab);
+                    }
+                }
+                tablaHabitaciones.setItems(filtrados);
+            }
+        });
+
         Button btnVolver = new Button("Volver a lista de hoteles");
         btnVolver.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
         btnVolver.setOnAction(e -> tabPane.getSelectionModel().selectFirst());
 
-        contenedor.getChildren().addAll(lblTitulo, tablaHabitaciones, btnVolver);
+        contenedor.getChildren().addAll(lblTitulo, boxBusqueda, tablaHabitaciones, btnVolver);
 
         tabHabitaciones.setContent(contenedor);
         tabPane.getTabs().add(tabHabitaciones);
@@ -262,6 +288,14 @@ public class MenuPrincipal {
         lblTitulo.getStyleClass().add("section-header");
         lblTitulo.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
+        // Búsqueda hoteles
+        HBox boxBusqueda = new HBox(10);
+        TextField txtBuscar = new TextField();
+        txtBuscar.setPromptText("Buscar hotel por nombre o ubicación...");
+        Button btnBuscar = new Button("Buscar");
+        btnBuscar.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
+        boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar);
+
         Button btnNuevoHotel = new Button("Crear Nuevo Hotel");
         btnNuevoHotel.getStyleClass().add("btn-primary");
         btnNuevoHotel.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
@@ -328,7 +362,25 @@ public class MenuPrincipal {
 
         cargarDatosHoteles(tablaHoteles);
 
-        contenedor.getChildren().addAll(lblTitulo, btnNuevoHotel, areaNotificacion, tablaHoteles);
+        // Acción buscar hoteles
+        btnBuscar.setOnAction(e -> {
+            String query = txtBuscar.getText().trim().toLowerCase();
+            if (query.isEmpty()) {
+                cargarDatosHoteles(tablaHoteles);
+            } else {
+                ObservableList<ModeloHotel> items = tablaHoteles.getItems();
+                ObservableList<ModeloHotel> filtrados = FXCollections.observableArrayList();
+                for (ModeloHotel hotel : items) {
+                    if (hotel.getNombre().toLowerCase().contains(query)
+                            || hotel.getUbicacion().toLowerCase().contains(query)) {
+                        filtrados.add(hotel);
+                    }
+                }
+                tablaHoteles.setItems(filtrados);
+            }
+        });
+
+        contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevoHotel, areaNotificacion, tablaHoteles);
         return contenedor;
     }
 
@@ -856,7 +908,6 @@ public class MenuPrincipal {
         public void setUbicacion(String ubicacion) { this.ubicacion = ubicacion; }
     }
 
-    // Cambiado "id" por "codigo" para el identificador único
     public static class ModeloHabitacion {
         private String codigo;
         private String estilo;

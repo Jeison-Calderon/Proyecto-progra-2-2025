@@ -74,13 +74,15 @@ public class MenuPrincipal {
         Label lblTitulo = new Label("Habitaciones del Hotel: " + hotel.getNombre());
         lblTitulo.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-        // Búsqueda habitaciones
+        // Búsqueda habitaciones + Listar
         HBox boxBusqueda = new HBox(10);
         TextField txtBuscar = new TextField();
         txtBuscar.setPromptText("Buscar habitación por estilo o precio...");
         Button btnBuscar = new Button("Buscar");
         btnBuscar.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
-        boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar);
+        Button btnListar = new Button("Listar");
+        btnListar.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
+        boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar, btnListar);
 
         TableView<ModeloHabitacion> tablaHabitaciones = new TableView<>();
         tablaHabitaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -132,6 +134,11 @@ public class MenuPrincipal {
                 }
                 tablaHabitaciones.setItems(filtrados);
             }
+        });
+        // Acción listar habitaciones
+        btnListar.setOnAction(e -> {
+            txtBuscar.clear();
+            cargarHabitacionesSimples(hotel.getCodigo(), tablaHabitaciones);
         });
 
         Button btnVolver = new Button("Volver a lista de hoteles");
@@ -288,13 +295,15 @@ public class MenuPrincipal {
         lblTitulo.getStyleClass().add("section-header");
         lblTitulo.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        // Búsqueda hoteles
+        // Búsqueda hoteles + Listar
         HBox boxBusqueda = new HBox(10);
         TextField txtBuscar = new TextField();
         txtBuscar.setPromptText("Buscar hotel por nombre o ubicación...");
         Button btnBuscar = new Button("Buscar");
         btnBuscar.setStyle("-fx-background-color: #28a745; -fx-text-fill: white;");
-        boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar);
+        Button btnListar = new Button("Listar");
+        btnListar.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
+        boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar, btnListar);
 
         Button btnNuevoHotel = new Button("Crear Nuevo Hotel");
         btnNuevoHotel.getStyleClass().add("btn-primary");
@@ -378,6 +387,11 @@ public class MenuPrincipal {
                 }
                 tablaHoteles.setItems(filtrados);
             }
+        });
+        // Acción listar hoteles
+        btnListar.setOnAction(e -> {
+            txtBuscar.clear();
+            cargarDatosHoteles(tablaHoteles);
         });
 
         contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevoHotel, areaNotificacion, tablaHoteles);

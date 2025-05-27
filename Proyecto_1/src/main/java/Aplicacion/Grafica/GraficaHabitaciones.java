@@ -147,7 +147,7 @@ public class GraficaHabitaciones {
     private void agregarMenuContextual() {
         ContextMenu contextMenu = new ContextMenu();
         MenuItem modificar = new MenuItem("Modificar estilo");
-        MenuItem editar = new MenuItem("Editar precio");
+        MenuItem editar = new MenuItem("Editar");
         MenuItem borrar = new MenuItem("Borrar habitación");
 
         modificar.setOnAction(e -> {
@@ -174,7 +174,7 @@ public class GraficaHabitaciones {
             ObservableList<String> fila = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (fila == null) return;
             TextInputDialog dialog = new TextInputDialog(fila.get(2));
-            dialog.setHeaderText("Editar precio:");
+            dialog.setHeaderText("Editar:");
             Optional<String> result = dialog.showAndWait();
             result.ifPresent(nuevo -> {
                 JSONObject req = new JSONObject();

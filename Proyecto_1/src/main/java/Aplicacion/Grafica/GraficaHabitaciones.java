@@ -1,175 +1,231 @@
 package Aplicacion.Grafica;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Optional;
 
 public class GraficaHabitaciones {
-
-    private TextField txtCodigo, txtEstilo, txtPrecio;
+    private final String codigoHotel;
+    private TextField txtEstilo, txtPrecio;
     private TextArea txtResultado;
+    private TableView<ObservableList<String>> tablaHabitaciones;
     private Socket socket;
     private PrintWriter writer;
     private BufferedReader reader;
+    private String host = "localhost";
+    private int puerto = 9999;
 
-    public GraficaHabitaciones() {
-        conectarAlServidor();
+
+    public GraficaHabitaciones(String codigoHotel) {
+        this.codigoHotel = codigoHotel;
+        conectarServidor();
     }
 
-    public GridPane getVista() {
-        Label lblCodigo = new Label("Código (para modificar/eliminar):");
-        txtCodigo = new TextField();
-
+    public VBox getVista() {
         Label lblEstilo = new Label("Estilo:");
         txtEstilo = new TextField();
 
         Label lblPrecio = new Label("Precio:");
         txtPrecio = new TextField();
 
-        Button btnRegistrar = new Button("Registrar");
+        Button btnRegistrar = new Button("Registrar Habitación");
         btnRegistrar.setOnAction(e -> registrarHabitacion());
-
-        Button btnModificar = new Button("Modificar");
-        btnModificar.setOnAction(e -> modificarHabitacion());
-
-        Button btnEliminar = new Button("Eliminar");
-        btnEliminar.setOnAction(e -> eliminarHabitacion());
-
-        Button btnBuscar = new Button("Buscar");
-        btnBuscar.setOnAction(e -> buscarHabitaciones());
 
         txtResultado = new TextArea();
         txtResultado.setEditable(false);
         txtResultado.setWrapText(true);
 
-        GridPane grid = new GridPane();
-        grid.setPadding(new Insets(10));
-        grid.setVgap(8);
-        grid.setHgap(10);
+        GridPane formulario = new GridPane();
+        formulario.setPadding(new Insets(10));
+        formulario.setVgap(10);
+        formulario.setHgap(10);
 
-        grid.add(lblCodigo, 0, 0); grid.add(txtCodigo, 1, 0);
-        grid.add(lblEstilo, 0, 1); grid.add(txtEstilo, 1, 1);
-        grid.add(lblPrecio, 0, 2); grid.add(txtPrecio, 1, 2);
-        grid.add(btnRegistrar, 0, 3);
-        grid.add(btnModificar, 1, 3);
-        grid.add(btnEliminar, 0, 4);
-        grid.add(btnBuscar, 1, 4);
-        grid.add(txtResultado, 0, 5, 2, 1);
+        formulario.add(new Label("Hotel Código: " + codigoHotel), 0, 0, 2, 1);
+        formulario.add(lblEstilo, 0, 1); formulario.add(txtEstilo, 1, 1);
+        formulario.add(lblPrecio, 0, 2); formulario.add(txtPrecio, 1, 2);
+        formulario.add(btnRegistrar, 1, 3);
+        formulario.add(txtResultado, 0, 4, 2, 1);
 
-        return grid;
+        tablaHabitaciones = new TableView<>();
+        agregarMenuContextual();
+
+        VBox root = new VBox(10, formulario, new Label("Habitaciones existentes:"), tablaHabitaciones);
+        root.setPadding(new Insets(10));
+
+        listarHabitaciones();
+
+        return root;
     }
 
-    private void conectarAlServidor() {
+    private void conectarServidor() {
         try {
             socket = new Socket("localhost", 9999);
             writer = new PrintWriter(socket.getOutputStream(), true);
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         } catch (IOException e) {
-            if (txtResultado != null) {
-                txtResultado.appendText("Error al conectar al servidor: " + e.getMessage() + "\n");
-            }
+            e.printStackTrace();
         }
     }
 
-    private void registrarHabitacion() {
+    public void registrarHabitacion() {
         String estilo = txtEstilo.getText().trim();
-        String precio = txtPrecio.getText().trim();
+        String precioStr = txtPrecio.getText().trim();
 
-        if (estilo.isEmpty() || precio.isEmpty()) {
-            txtResultado.appendText("Campos estilo y precio son obligatorios.\n");
+        if (estilo.isEmpty() || precioStr.isEmpty()) {
+            txtResultado.appendText("Todos los campos son obligatorios.\n");
             return;
         }
 
-        JSONObject habitacion = new JSONObject();
-        habitacion.put("estilo", estilo);
-        habitacion.put("precio", precio);
+        try {
+            double precio = Double.parseDouble(precioStr);
 
-        JSONObject request = new JSONObject();
-        request.put("operacion", "crearHabitacion");
-        request.put("habitacion", habitacion);
+            JSONObject habitacion = new JSONObject();
+            habitacion.put("estilo", estilo);
+            habitacion.put("precio", precio);
+            habitacion.put("codigoHotel", codigoHotel);
 
-        enviarPeticionYMostrarRespuesta(request);
+            JSONObject request = new JSONObject();
+            request.put("operacion", "crearHabitacion");
+            request.put("habitacion", habitacion);
+
+            enviarPeticion(request);
+            listarHabitaciones();
+
+        } catch (NumberFormatException e) {
+            txtResultado.appendText("Precio debe ser numérico válido.\n");
+        }
     }
 
-    private void buscarHabitaciones() {
-        JSONObject request = new JSONObject();
-        request.put("operacion", "listarHabitaciones");  // Nombre corregido
-
+    private void listarHabitaciones() {
         try {
+            JSONObject request = new JSONObject();
+            request.put("operacion", "listarHabitaciones");
+            request.put("codigoHotel", codigoHotel);
+
             writer.println(request.toString());
             String respuestaStr = reader.readLine();
             JSONObject respuesta = new JSONObject(respuestaStr);
 
             if (respuesta.getString("estado").equals("ok")) {
                 JSONArray habitaciones = respuesta.getJSONArray("habitaciones");
-                txtResultado.appendText("Lista de Habitaciones:\n");
-                for (int i = 0; i < habitaciones.length(); i++) {
-                    JSONObject habitacion = habitaciones.getJSONObject(i);
-                    txtResultado.appendText(
-                            habitacion.getString("codigo") + " - " +
-                                    habitacion.getString("estilo") + " ($" +
-                                    habitacion.getDouble("precio") + ")\n"
-                    );
+                tablaHabitaciones.getItems().clear();
+                tablaHabitaciones.getColumns().clear();
+
+                if (habitaciones.length() > 0) {
+                    JSONObject first = habitaciones.getJSONObject(0);
+                    for (String key : first.keySet()) {
+                        TableColumn<ObservableList<String>, String> col = new TableColumn<>(key);
+                        final int colIndex = new java.util.ArrayList<>(first.keySet()).indexOf(key);
+                        col.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().get(colIndex)));
+                        tablaHabitaciones.getColumns().add(col);
+                    }
+
+                    for (int i = 0; i < habitaciones.length(); i++) {
+                        JSONObject h = habitaciones.getJSONObject(i);
+                        ObservableList<String> fila = FXCollections.observableArrayList();
+                        for (String key : h.keySet()) {
+                            fila.add(h.get(key).toString());
+                        }
+                        tablaHabitaciones.getItems().add(fila);
+                    }
                 }
-            } else {
-                txtResultado.appendText("Error: " + respuesta.getString("mensaje") + "\n");
             }
-
         } catch (IOException e) {
-            txtResultado.appendText("Error al buscar habitaciones: " + e.getMessage() + "\n");
+            txtResultado.appendText("Error al cargar habitaciones: " + e.getMessage() + "\n");
         }
     }
 
-    private void modificarHabitacion() {
-        String codigo = txtCodigo.getText().trim();
-        String estilo = txtEstilo.getText().trim();
-        String precio = txtPrecio.getText().trim();
+    private void agregarMenuContextual() {
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem modificar = new MenuItem("Modificar estilo");
+        MenuItem editar = new MenuItem("Editar precio");
+        MenuItem borrar = new MenuItem("Borrar habitación");
 
-        if (codigo.isEmpty() || estilo.isEmpty() || precio.isEmpty()) {
-            txtResultado.appendText("Debe completar código, estilo y precio.\n");
-            return;
-        }
+        modificar.setOnAction(e -> {
+            ObservableList<String> fila = tablaHabitaciones.getSelectionModel().getSelectedItem();
+            if (fila == null) return;
+            TextInputDialog dialog = new TextInputDialog(fila.get(1));
+            dialog.setHeaderText("Modificar estilo:");
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(nuevo -> {
+                JSONObject req = new JSONObject();
+                JSONObject hab = new JSONObject();
+                hab.put("id", fila.get(0));
+                hab.put("estilo", nuevo);
+                hab.put("precio", fila.get(2));
+                hab.put("codigoHotel", codigoHotel);
+                req.put("operacion", "modificarHabitacion");
+                req.put("habitacion", hab);
+                enviarPeticion(req);
+                listarHabitaciones();
+            });
+        });
 
-        JSONObject habitacion = new JSONObject();
-        habitacion.put("codigo", codigo);
-        habitacion.put("estilo", estilo);
-        habitacion.put("precio", Double.parseDouble(precio));
+        editar.setOnAction(e -> {
+            ObservableList<String> fila = tablaHabitaciones.getSelectionModel().getSelectedItem();
+            if (fila == null) return;
+            TextInputDialog dialog = new TextInputDialog(fila.get(2));
+            dialog.setHeaderText("Editar precio:");
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(nuevo -> {
+                JSONObject req = new JSONObject();
+                JSONObject hab = new JSONObject();
+                hab.put("id", fila.get(0));
+                hab.put("estilo", fila.get(1));
+                hab.put("precio", nuevo);
+                hab.put("codigoHotel", codigoHotel);
+                req.put("operacion", "modificarHabitacion");
+                req.put("habitacion", hab);
+                enviarPeticion(req);
+                listarHabitaciones();
+            });
+        });
 
-        JSONObject request = new JSONObject();
-        request.put("operacion", "modificarHabitacion");  // Nombre corregido
-        request.put("habitacion", habitacion);
+        borrar.setOnAction(e -> {
+            ObservableList<String> fila = tablaHabitaciones.getSelectionModel().getSelectedItem();
+            if (fila == null) return;
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setHeaderText("¿Eliminar habitación?");
+            alert.setContentText("ID: " + fila.get(0));
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                JSONObject req = new JSONObject();
+                req.put("operacion", "eliminarHabitacion");
+                req.put("id", fila.get(0));
+                enviarPeticion(req);
+                listarHabitaciones();
+            }
+        });
 
-        enviarPeticionYMostrarRespuesta(request);
+        contextMenu.getItems().addAll(modificar, editar, borrar);
+        tablaHabitaciones.setContextMenu(contextMenu);
     }
 
-    private void eliminarHabitacion() {
-        String codigo = txtCodigo.getText().trim();
-        if (codigo.isEmpty()) {
-            txtResultado.appendText("Debe ingresar el código de la habitación a eliminar.\n");
-            return;
-        }
-
-        JSONObject request = new JSONObject();
-        request.put("operacion", "eliminarHabitacion");  // Nombre corregido
-        request.put("codigo", codigo);
-
-        enviarPeticionYMostrarRespuesta(request);
-    }
-
-    private void enviarPeticionYMostrarRespuesta(JSONObject request) {
-        try {
+    private void enviarPeticion(JSONObject request) {
+        try (
+                Socket socket = new Socket(host, puerto);  // Variables de conexión que debes tener definidas
+                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        ) {
+            // Enviar la petición
             writer.println(request.toString());
+
+            // Leer la respuesta
             String respuestaStr = reader.readLine();
             JSONObject respuesta = new JSONObject(respuestaStr);
 
+            // Procesar la respuesta
             if (respuesta.getString("estado").equals("ok")) {
                 txtResultado.appendText("✔ " + respuesta.getString("mensaje") + "\n");
-                txtCodigo.clear();
                 txtEstilo.clear();
                 txtPrecio.clear();
             } else {
@@ -181,13 +237,4 @@ public class GraficaHabitaciones {
         }
     }
 
-    public void cerrarConexion() {
-        try {
-            if (writer != null) writer.close();
-            if (reader != null) reader.close();
-            if (socket != null && !socket.isClosed()) socket.close();
-        } catch (IOException e) {
-            txtResultado.appendText("Error cerrando conexión: " + e.getMessage());
-        }
-    }
 }

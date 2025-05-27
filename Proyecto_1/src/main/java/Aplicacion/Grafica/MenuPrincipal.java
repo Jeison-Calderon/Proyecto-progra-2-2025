@@ -10,6 +10,8 @@ import org.json.JSONObject;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Optional;
+import java.util.UUID;
 
 public class MenuPrincipal {
 
@@ -19,8 +21,14 @@ public class MenuPrincipal {
     private TextField txtCodigo, txtNombre, txtUbicacion;
     private TextArea txtResultado;
 
-    public void construirMenu(BorderPane dashboardPane, TabPane tabPane) {
+    public BorderPane getVista() {
         conectar();
+
+        BorderPane root = new BorderPane();
+        TabPane tabPane = new TabPane();
+        root.setCenter(tabPane);
+
+        VBox crudBox = construirFormularioCRUD();
 
         Label lblTitulo = new Label("Seleccione un hotel para gestionar habitaciones");
         lblTitulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold");
@@ -35,18 +43,17 @@ public class MenuPrincipal {
         VBox panelSeleccion = new VBox(10, lblTitulo, boxSeleccion);
         panelSeleccion.setPadding(new Insets(10));
 
-        VBox crudBox = construirFormularioCRUD();
-
         HBox topPanel = new HBox(30, panelSeleccion, crudBox);
-        dashboardPane.setTop(topPanel);
+        root.setTop(topPanel);
 
         txtResultado = new TextArea();
         txtResultado.setEditable(false);
         txtResultado.setWrapText(true);
         txtResultado.setPrefHeight(100);
-        dashboardPane.setBottom(txtResultado);
+        root.setBottom(txtResultado);
 
         cargarHoteles();
+        return root;
     }
 
     private VBox construirFormularioCRUD() {
@@ -86,12 +93,102 @@ public class MenuPrincipal {
         }
 
         TableView<ObservableList<String>> tabla = new TableView<>();
+        agregarMenuContextual(tabla, codigoHotel);
+
         Tab tabHotel = new Tab(codigoHotel, tabla);
         tabHotel.setClosable(true);
         tabPane.getTabs().add(tabHotel);
         tabPane.getSelectionModel().select(tabHotel);
 
         cargarHabitaciones(codigoHotel, tabla);
+    }
+
+    private void agregarMenuContextual(TableView<ObservableList<String>> tabla, String codigoHotel) {
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem registrar = new MenuItem("Registrar habitación");
+        MenuItem editar = new MenuItem("Editar precio");
+        MenuItem borrar = new MenuItem("Borrar habitación");
+
+        registrar.setOnAction(e -> registrarHabitacion(codigoHotel, tabla));
+
+        editar.setOnAction(e -> {
+            ObservableList<String> fila = tabla.getSelectionModel().getSelectedItem();
+            if (fila == null) return;
+            TextInputDialog dialog = new TextInputDialog(fila.get(2));
+            dialog.setHeaderText("Editar precio:");
+            Optional<String> result = dialog.showAndWait();
+            result.ifPresent(nuevo -> {
+                JSONObject request = new JSONObject();
+                JSONObject hab = new JSONObject();
+                hab.put("codigoHotel", codigoHotel);
+                hab.put("id", fila.get(0));
+                hab.put("estilo", fila.get(1));
+                hab.put("precio", nuevo);
+                request.put("operacion", "modificarHabitacion");
+                request.put("habitacion", hab);
+                enviarPeticion(request);
+                cargarHabitaciones(codigoHotel, tabla);
+            });
+        });
+
+        borrar.setOnAction(e -> {
+            ObservableList<String> fila = tabla.getSelectionModel().getSelectedItem();
+            if (fila == null) return;
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setHeaderText("¿Eliminar habitación?");
+            alert.setContentText("ID: " + fila.get(0));
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                JSONObject request = new JSONObject();
+                request.put("operacion", "eliminarHabitacion");
+                request.put("id", fila.get(0));
+                enviarPeticion(request);
+                cargarHabitaciones(codigoHotel, tabla);
+            }
+        });
+
+        contextMenu.getItems().addAll(registrar, editar, borrar);
+        tabla.setContextMenu(contextMenu);
+    }
+
+    private void registrarHabitacion(String codigoHotel, TableView<ObservableList<String>> tabla) {
+        TextInputDialog dialogEstilo = new TextInputDialog();
+        dialogEstilo.setHeaderText("Ingrese el estilo de la habitación:");
+        Optional<String> optEstilo = dialogEstilo.showAndWait();
+        if (!optEstilo.isPresent()) return;
+
+        TextInputDialog dialogPrecio = new TextInputDialog();
+        dialogPrecio.setHeaderText("Ingrese el precio de la habitación:");
+        Optional<String> optPrecio = dialogPrecio.showAndWait();
+        if (!optPrecio.isPresent()) return;
+
+        String estilo = optEstilo.get().trim();
+        String precioStr = optPrecio.get().trim();
+
+        if (estilo.isEmpty() || precioStr.isEmpty()) {
+            txtResultado.appendText("Todos los campos son obligatorios.\n");
+            return;
+        }
+
+        try {
+            double precio = Double.parseDouble(precioStr);
+
+            JSONObject habitacion = new JSONObject();
+            habitacion.put("id", UUID.randomUUID().toString().substring(0, 8));
+            habitacion.put("estilo", estilo);
+            habitacion.put("precio", precio);
+            habitacion.put("codigoHotel", codigoHotel);
+
+            JSONObject request = new JSONObject();
+            request.put("operacion", "crearHabitacion");
+            request.put("habitacion", habitacion);
+
+            enviarPeticion(request);
+            cargarHabitaciones(codigoHotel, tabla);
+
+        } catch (NumberFormatException e) {
+            txtResultado.appendText("Precio debe ser numérico válido.\n");
+        }
     }
 
     private void conectar() {
@@ -229,13 +326,17 @@ public class MenuPrincipal {
 
             if (respuesta.getString("estado").equals("ok")) {
                 txtResultado.appendText("✔ " + respuesta.getString("mensaje") + "\n");
-                txtCodigo.clear(); txtNombre.clear(); txtUbicacion.clear();
+                txtCodigo.clear();
+                txtNombre.clear();
+                txtUbicacion.clear();
                 cargarHoteles();
             } else {
                 txtResultado.appendText("✘ Error: " + respuesta.getString("mensaje") + "\n");
             }
+
         } catch (IOException e) {
             txtResultado.appendText("Error de comunicación: " + e.getMessage() + "\n");
         }
     }
+
 }

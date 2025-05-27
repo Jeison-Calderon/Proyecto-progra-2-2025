@@ -16,6 +16,8 @@ public class MenuPrincipal {
     private ComboBox<String> cbHoteles;
     private PrintWriter writer;
     private BufferedReader reader;
+    private TextField txtCodigo, txtNombre, txtUbicacion;
+    private TextArea txtResultado;
 
     public void construirMenu(BorderPane dashboardPane, TabPane tabPane) {
         conectar();
@@ -33,8 +35,43 @@ public class MenuPrincipal {
         VBox panelSeleccion = new VBox(10, lblTitulo, boxSeleccion);
         panelSeleccion.setPadding(new Insets(10));
 
-        dashboardPane.setTop(panelSeleccion);
+        VBox crudBox = construirFormularioCRUD();
+
+        HBox topPanel = new HBox(30, panelSeleccion, crudBox);
+        dashboardPane.setTop(topPanel);
+
+        txtResultado = new TextArea();
+        txtResultado.setEditable(false);
+        txtResultado.setWrapText(true);
+        txtResultado.setPrefHeight(100);
+        dashboardPane.setBottom(txtResultado);
+
         cargarHoteles();
+    }
+
+    private VBox construirFormularioCRUD() {
+        txtCodigo = new TextField();
+        txtCodigo.setPromptText("Código");
+        txtNombre = new TextField();
+        txtNombre.setPromptText("Nombre");
+        txtUbicacion = new TextField();
+        txtUbicacion.setPromptText("Ubicación");
+
+        Button btnCrear = new Button("Crear");
+        btnCrear.setOnAction(e -> registrarHotel());
+        Button btnModificar = new Button("Modificar");
+        btnModificar.setOnAction(e -> modificarHotel());
+        Button btnEliminar = new Button("Eliminar");
+        btnEliminar.setOnAction(e -> eliminarHotel());
+        Button btnListar = new Button("Listar");
+        btnListar.setOnAction(e -> cargarHoteles());
+
+        HBox botones = new HBox(10, btnCrear, btnModificar, btnEliminar, btnListar);
+        VBox crud = new VBox(10, new Label("CRUD de Hotel:"), txtCodigo, txtNombre, txtUbicacion, botones);
+        crud.setPadding(new Insets(10));
+        crud.setStyle("-fx-border-color: lightgray; -fx-border-radius: 5;");
+
+        return crud;
     }
 
     private void abrirPestanaHotel(TabPane tabPane) {
@@ -125,6 +162,80 @@ public class MenuPrincipal {
             }
         } catch (IOException e) {
             System.out.println("Error al cargar habitaciones: " + e.getMessage());
+        }
+    }
+
+    private void registrarHotel() {
+        String nombre = txtNombre.getText().trim();
+        String ubicacion = txtUbicacion.getText().trim();
+
+        if (nombre.isEmpty() || ubicacion.isEmpty()) {
+            txtResultado.appendText("Todos los campos son obligatorios.\n");
+            return;
+        }
+
+        JSONObject hotel = new JSONObject();
+        hotel.put("nombre", nombre);
+        hotel.put("ubicacion", ubicacion);
+
+        JSONObject request = new JSONObject();
+        request.put("operacion", "crearHotel");
+        request.put("hotel", hotel);
+
+        enviarPeticion(request);
+    }
+
+    private void modificarHotel() {
+        String codigo = txtCodigo.getText().trim();
+        String nombre = txtNombre.getText().trim();
+        String ubicacion = txtUbicacion.getText().trim();
+
+        if (codigo.isEmpty() || nombre.isEmpty() || ubicacion.isEmpty()) {
+            txtResultado.appendText("Debe completar código, nombre y ubicación.\n");
+            return;
+        }
+
+        JSONObject hotel = new JSONObject();
+        hotel.put("codigo", codigo);
+        hotel.put("nombre", nombre);
+        hotel.put("ubicacion", ubicacion);
+
+        JSONObject request = new JSONObject();
+        request.put("operacion", "modificarHotel");
+        request.put("hotel", hotel);
+
+        enviarPeticion(request);
+    }
+
+    private void eliminarHotel() {
+        String codigo = txtCodigo.getText().trim();
+        if (codigo.isEmpty()) {
+            txtResultado.appendText("Debe ingresar el código del hotel a eliminar.\n");
+            return;
+        }
+
+        JSONObject request = new JSONObject();
+        request.put("operacion", "eliminarHotel");
+        request.put("codigo", codigo);
+
+        enviarPeticion(request);
+    }
+
+    private void enviarPeticion(JSONObject request) {
+        try {
+            writer.println(request.toString());
+            String respuestaStr = reader.readLine();
+            JSONObject respuesta = new JSONObject(respuestaStr);
+
+            if (respuesta.getString("estado").equals("ok")) {
+                txtResultado.appendText("✔ " + respuesta.getString("mensaje") + "\n");
+                txtCodigo.clear(); txtNombre.clear(); txtUbicacion.clear();
+                cargarHoteles();
+            } else {
+                txtResultado.appendText("✘ Error: " + respuesta.getString("mensaje") + "\n");
+            }
+        } catch (IOException e) {
+            txtResultado.appendText("Error de comunicación: " + e.getMessage() + "\n");
         }
     }
 }

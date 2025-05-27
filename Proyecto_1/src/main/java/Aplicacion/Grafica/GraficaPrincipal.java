@@ -10,6 +10,8 @@ import javafx.stage.Stage;
 
 public class GraficaPrincipal extends Application {
 
+
+
     @Override
     public void start(Stage primaryStage) {
         TabPane tabPane = new TabPane();

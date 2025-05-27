@@ -1,0 +1,85 @@
+/* Estilos generales */
+.root {
+    -fx-font-family: 'Arial', sans-serif;
+    -fx-background-color: white;
+}
+
+/* Estilos para los botones */
+.button {
+    -fx-padding: 5px 10px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+}
+
+/* Botones de acción */
+.btn-primary {
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
+}
+
+.btn-info {
+    -fx-background-color: #17a2b8;
+    -fx-text-fill: white;
+}
+
+.btn-edit {
+    -fx-background-color: #007bff;
+    -fx-text-fill: white;
+}
+
+.btn-delete {
+    -fx-background-color: #dc3545;
+    -fx-text-fill: white;
+}
+
+/* Estilos para tablas */
+.table-view {
+    -fx-border-color: #dee2e6;
+    -fx-border-width: 1px;
+    -fx-background-color: transparent;
+}
+
+.table-view .column-header {
+    -fx-background-color: #f8f9fa;
+    -fx-font-weight: bold;
+}
+
+.table-row-cell {
+    -fx-background-color: white;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #f8f9fa;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #b3d7ff;
+}
+
+/* Notificaciones */
+.notification {
+    -fx-background-color: #d4edda;
+    -fx-border-color: #c3e6cb;
+    -fx-border-radius: 4px;
+    -fx-padding: 10px;
+}
+
+.notification.error {
+    -fx-background-color: #f8d7da;
+    -fx-border-color: #f5c6cb;
+}
+
+/* Headers de secciones */
+.section-header {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 10px 0;
+}
+
+/* Header principal */
+.header-label {
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}

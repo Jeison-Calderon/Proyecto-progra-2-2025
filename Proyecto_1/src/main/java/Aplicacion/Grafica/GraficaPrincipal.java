@@ -18,6 +18,9 @@ public class GraficaPrincipal extends Application {
         root.setBottom(menuVista.getBottom());
 
         Scene scene = new Scene(root, 900, 600);
+        // Aplicamos un CSS para la apariencia moderna
+        scene.getStylesheets().add(getClass().getResource("/estilos.css").toExternalForm());
+
         primaryStage.setTitle("Sistema de Gestión de Hoteles");
         primaryStage.setScene(scene);
         primaryStage.show();

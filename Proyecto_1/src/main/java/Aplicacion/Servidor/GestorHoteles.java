@@ -82,6 +82,16 @@ public class GestorHoteles {
         }
         return encontrado;
     }
+    public static synchronized Hotel buscar(String codigo) {
+        List<Hotel> hoteles = listar();
+        for (Hotel hotel : hoteles) {
+            if (hotel.getCodigoHotel().equalsIgnoreCase(codigo)) {
+                return hotel;
+            }
+        }
+        return null; //no se encontro
+    }
+
 
     private static void sobrescribirArchivo(List<Hotel> hoteles) {
         try (

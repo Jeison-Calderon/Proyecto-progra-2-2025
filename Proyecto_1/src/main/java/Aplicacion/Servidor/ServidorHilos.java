@@ -46,7 +46,7 @@ public class ServidorHilos extends Thread {
                             respuesta.put("estado", "ok");
                             respuesta.put("mensaje", "Hotel guardado con código " + resultado);
                         }
-                        break; // Faltaba un break aquí
+                        break;
 
                     case "listarHoteles":
                         List<Hotel> hoteles = GestorHoteles.listar();
@@ -89,6 +89,24 @@ public class ServidorHilos extends Thread {
                         }
                         break;
 
+                    case "buscarHotel":
+                        String codigoBuscar = jsonEntrada.getString("codigo");
+                        Hotel hotelEncontrado = GestorHoteles.buscar(codigoBuscar);
+
+                        if (hotelEncontrado != null) {
+                            JSONObject hotelJSON = new JSONObject();
+                            hotelJSON.put("codigo", hotelEncontrado.getCodigoHotel());
+                            hotelJSON.put("nombre", hotelEncontrado.getNombre());
+                            hotelJSON.put("ubicacion", hotelEncontrado.getUbicacion());
+
+                            respuesta.put("estado", "ok");
+                            respuesta.put("hotel", hotelJSON);
+                        } else {
+                            respuesta.put("estado", "error");
+                            respuesta.put("mensaje", "Hotel no encontrado");
+                        }
+                        break;
+
                     case "crearHabitacion":
                         JSONObject datosHab = jsonEntrada.getJSONObject("habitacion");
                         String estilo = datosHab.getString("estilo");
@@ -104,7 +122,6 @@ public class ServidorHilos extends Thread {
                         }
                         break;
 
-                    // Nuevo case para listar habitaciones
                     case "listarHabitaciones":
                         List<Habitacion> habitaciones = GestorHabitaciones.listar();
                         JSONArray arrHab = new JSONArray();
@@ -119,7 +136,6 @@ public class ServidorHilos extends Thread {
                         respuesta.put("habitaciones", arrHab);
                         break;
 
-                    // Nuevo case para modificar habitación
                     case "modificarHabitacion":
                         JSONObject habModificar = jsonEntrada.getJSONObject("habitacion");
                         String codigoMod = habModificar.getString("codigo");
@@ -138,7 +154,6 @@ public class ServidorHilos extends Thread {
                         }
                         break;
 
-                    // Nuevo case para eliminar habitación
                     case "eliminarHabitacion":
                         String codigoHabEliminar = jsonEntrada.getString("codigo");
                         boolean habEliminada = GestorHabitaciones.eliminar(codigoHabEliminar);
@@ -157,6 +172,7 @@ public class ServidorHilos extends Thread {
                         respuesta.put("mensaje", "Operación no reconocida");
                         break;
                 }
+
 
                 writer.println(respuesta.toString());
 

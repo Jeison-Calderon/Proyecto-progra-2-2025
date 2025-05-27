@@ -13,6 +13,7 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.Socket;
 
+//Grafica menu principal, todavia esta en desarollo
 public class MenuPrincipal {
 
     private ComboBox<String> cbHoteles;

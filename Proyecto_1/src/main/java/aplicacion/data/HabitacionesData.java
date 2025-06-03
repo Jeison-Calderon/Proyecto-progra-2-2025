@@ -1,10 +1,12 @@
-package Aplicacion.Servidor;
+package aplicacion.data;
+
+import aplicacion.domain.Habitacion;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GestorHabitaciones {
+public class HabitacionesData {
     private static final String ARCHIVO = "habitaciones.dat";
 
     public static synchronized String guardar(String estilo, double precio) {
@@ -37,7 +39,6 @@ public class GestorHabitaciones {
         return list;
     }
 
-    // Nuevo método para modificar habitación
     public static synchronized boolean modificar(Habitacion habitacionModificada) {
         List<Habitacion> habitaciones = listar();
         boolean encontrada = false;
@@ -57,7 +58,6 @@ public class GestorHabitaciones {
         return encontrada;
     }
 
-    // Nuevo método para eliminar habitación
     public static synchronized boolean eliminar(String codigo) {
         List<Habitacion> habitaciones = listar();
         boolean encontrada = false;

@@ -1,4 +1,4 @@
-package Aplicacion.Cliente;
+package aplicacion.cliente;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,14 +27,14 @@ public class EchoCliente {
                     new InputStreamReader(
                             echoSocket.getInputStream()));
             String entrada = reader.readLine();
-            System.out.println("Servidor: " + entrada);
+            System.out.println("servidor: " + entrada);
             String salida;
             BufferedReader lectorTeclado = new BufferedReader(
                     new InputStreamReader(System.in));
             while((salida = lectorTeclado.readLine()) != null){
                 writer.println(salida);
                 entrada = reader.readLine();
-                System.out.println("Servidor: " + entrada);
+                System.out.println("servidor: " + entrada);
             }//while
 
             reader.close();

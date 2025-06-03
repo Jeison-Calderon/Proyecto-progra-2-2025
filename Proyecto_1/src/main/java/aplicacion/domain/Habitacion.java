@@ -1,4 +1,4 @@
-package Aplicacion.Servidor;
+package aplicacion.domain;
 
 import java.io.Serializable;
 

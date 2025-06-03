@@ -3,6 +3,6 @@ module org.example.proyecto_1 {
     requires javafx.fxml;
     requires org.json;
 
-    exports Aplicacion;
-    exports Aplicacion.Grafica;
+    exports aplicacion;
+    exports aplicacion.grafica;
 }

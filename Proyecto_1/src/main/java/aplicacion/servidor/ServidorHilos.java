@@ -1,9 +1,13 @@
-package Aplicacion.Servidor;
+package aplicacion.servidor;
 
 import java.io.*;
 import java.net.Socket;
 import java.util.List;
 
+import aplicacion.data.HabitacionesData;
+import aplicacion.data.HotelesData;
+import aplicacion.domain.Habitacion;
+import aplicacion.domain.Hotel;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -11,7 +15,7 @@ public class ServidorHilos extends Thread {
     private Socket socket;
 
     public ServidorHilos(Socket socket) {
-        super("Aplicación.Servidor.ServidorHilos");
+        super("Aplicación.servidor.ServidorHilos");
         this.socket = socket;
     }
 
@@ -37,7 +41,7 @@ public class ServidorHilos extends Thread {
                         String nombre = datosHotel.getString("nombre");
                         String ubicacion = datosHotel.getString("ubicacion");
 
-                        String resultado = GestorHoteles.guardar(nombre, ubicacion);
+                        String resultado = HotelesData.guardar(nombre, ubicacion);
 
                         if (resultado.equals("duplicado")) {
                             respuesta.put("estado", "error");
@@ -49,7 +53,7 @@ public class ServidorHilos extends Thread {
                         break;
 
                     case "listarHoteles":
-                        List<Hotel> hoteles = GestorHoteles.listar();
+                        List<Hotel> hoteles = HotelesData.listar();
                         JSONArray arr = new JSONArray();
                         for (Hotel h : hoteles) {
                             JSONObject obj = new JSONObject();
@@ -64,7 +68,7 @@ public class ServidorHilos extends Thread {
 
                     case "eliminarHotel":
                         String codigoEliminar = jsonEntrada.getString("codigo");
-                        boolean eliminado = GestorHoteles.eliminar(codigoEliminar);
+                        boolean eliminado = HotelesData.eliminar(codigoEliminar);
                         if (eliminado) {
                             respuesta.put("estado", "ok");
                             respuesta.put("mensaje", "Hotel eliminado correctamente");
@@ -79,7 +83,7 @@ public class ServidorHilos extends Thread {
                         String codMod = hotelModificar.getString("codigo");
                         String nomMod = hotelModificar.getString("nombre");
                         String ubiMod = hotelModificar.getString("ubicacion");
-                        boolean modificado = GestorHoteles.modificar(new Hotel(codMod, nomMod, ubiMod));
+                        boolean modificado = HotelesData.modificar(new Hotel(codMod, nomMod, ubiMod));
                         if (modificado) {
                             respuesta.put("estado", "ok");
                             respuesta.put("mensaje", "Hotel modificado correctamente");
@@ -91,7 +95,7 @@ public class ServidorHilos extends Thread {
 
                     case "buscarHotel":
                         String codigoBuscar = jsonEntrada.getString("codigo");
-                        Hotel hotelEncontrado = GestorHoteles.buscar(codigoBuscar);
+                        Hotel hotelEncontrado = HotelesData.buscar(codigoBuscar);
 
                         if (hotelEncontrado != null) {
                             JSONObject hotelJSON = new JSONObject();
@@ -112,7 +116,7 @@ public class ServidorHilos extends Thread {
                         String estilo = datosHab.getString("estilo");
                         double precio = datosHab.getDouble("precio");
 
-                        String codHab = GestorHabitaciones.guardar(estilo, precio);
+                        String codHab = HabitacionesData.guardar(estilo, precio);
                         if (codHab.equals("duplicado")) {
                             respuesta.put("estado", "error");
                             respuesta.put("mensaje", "Habitación ya existe con ese estilo y precio.");
@@ -123,7 +127,7 @@ public class ServidorHilos extends Thread {
                         break;
 
                     case "listarHabitaciones":
-                        List<Habitacion> habitaciones = GestorHabitaciones.listar();
+                        List<Habitacion> habitaciones = HabitacionesData.listar();
                         JSONArray arrHab = new JSONArray();
                         for (Habitacion h : habitaciones) {
                             JSONObject obj = new JSONObject();
@@ -142,7 +146,7 @@ public class ServidorHilos extends Thread {
                         String estiloMod = habModificar.getString("estilo");
                         double precioMod = habModificar.getDouble("precio");
 
-                        boolean habModificada = GestorHabitaciones.modificar(
+                        boolean habModificada = HabitacionesData.modificar(
                                 new Habitacion(codigoMod, estiloMod, precioMod));
 
                         if (habModificada) {
@@ -156,7 +160,7 @@ public class ServidorHilos extends Thread {
 
                     case "eliminarHabitacion":
                         String codigoHabEliminar = jsonEntrada.getString("codigo");
-                        boolean habEliminada = GestorHabitaciones.eliminar(codigoHabEliminar);
+                        boolean habEliminada = HabitacionesData.eliminar(codigoHabEliminar);
 
                         if (habEliminada) {
                             respuesta.put("estado", "ok");

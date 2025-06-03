@@ -1,10 +1,12 @@
-package Aplicacion.Servidor;
+package aplicacion.data;
+
+import aplicacion.domain.Hotel;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GestorHoteles {
+public class HotelesData {
     private static final String ARCHIVO_HOTELES = "hoteles.dat";
 
     public static synchronized String generarCodigo() {
@@ -36,8 +38,6 @@ public class GestorHoteles {
         sobrescribirArchivo(hoteles);
         return codigo;
     }
-
-
 
     public static List<Hotel> listar() {
         List<Hotel> hoteles = new ArrayList<>();
@@ -89,9 +89,8 @@ public class GestorHoteles {
                 return hotel;
             }
         }
-        return null; //no se encontro
+        return null;
     }
-
 
     private static void sobrescribirArchivo(List<Hotel> hoteles) {
         try (
@@ -103,32 +102,6 @@ public class GestorHoteles {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
-    }
-
-    private static boolean existeArchivo() {
-        return new File(ARCHIVO_HOTELES).exists();
-    }
-
-    private static class MiObjectOutputStream extends ObjectOutputStream {
-        public MiObjectOutputStream(OutputStream out) throws IOException {
-            super(out);
-        }
-
-        public MiObjectOutputStream(OutputStream out, boolean append) throws IOException {
-            super(out);
-            if (append) {
-                reset();
-            }
-        }
-
-        @Override
-        protected void writeStreamHeader() throws IOException {
-            if (existeArchivo()) {
-                reset();
-            } else {
-                super.writeStreamHeader();
-            }
         }
     }
 }

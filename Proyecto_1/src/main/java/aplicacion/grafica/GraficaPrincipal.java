@@ -1,4 +1,4 @@
-package Aplicacion.Grafica;
+package aplicacion.grafica;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -26,7 +26,7 @@ public class GraficaPrincipal extends Application {
         root.setBottom(menuVista.getBottom());
 
         Scene scene = new Scene(root, 900, 600);
-        // Aplicamos un CSS para la apariencia moderna
+
         scene.getStylesheets().add(getClass().getResource("/estilos.css").toExternalForm());
 
         primaryStage.setTitle("Sistema de Gestión de Hoteles");
@@ -41,20 +41,20 @@ public class GraficaPrincipal extends Application {
         BufferedReader reader = null;
 
         try {
-            echoSocket = new Socket("192.168.56.1",9999);
+            echoSocket = new Socket("192.168.0.181",5001); //la ip q va aqui es la del server
             writer = new PrintWriter(echoSocket.getOutputStream(), true);
             reader = new BufferedReader(
                     new InputStreamReader(
                             echoSocket.getInputStream()));
             String entrada = reader.readLine();
-            System.out.println("Servidor: " + entrada);
+            System.out.println("servidor: " + entrada);
             String salida;
             BufferedReader lectorTeclado = new BufferedReader(
                     new InputStreamReader(System.in));
             while((salida = lectorTeclado.readLine()) != null){
                 writer.println(salida);
                 entrada = reader.readLine();
-                System.out.println("Servidor: " + entrada);
+                System.out.println("servidor: " + entrada);
             }//while
 
             reader.close();

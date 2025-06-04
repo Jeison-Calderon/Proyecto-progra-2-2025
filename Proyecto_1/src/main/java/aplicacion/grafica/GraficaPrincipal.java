@@ -41,11 +41,8 @@ public class GraficaPrincipal extends Application {
         BufferedReader reader = null;
 
         try {
-<<<<<<< Updated upstream
-            echoSocket = new Socket("192.168.0.181",5001); //la ip q va aqui es la del server
-=======
             echoSocket = new Socket("192.168.100.8",5001); //la ip q va aqui es la del server
->>>>>>> Stashed changes
+
             writer = new PrintWriter(echoSocket.getOutputStream(), true);
             reader = new BufferedReader(
                     new InputStreamReader(

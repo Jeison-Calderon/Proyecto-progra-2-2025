@@ -70,11 +70,5 @@ public class GraficaPrincipal extends Application {
 
     }
 
-    public static void main(String[] args) throws UnknownHostException {
-        launch(args);
-
-
-
-
-    }
+    public static void main(String[] args) throws UnknownHostException { launch(args); }
 }

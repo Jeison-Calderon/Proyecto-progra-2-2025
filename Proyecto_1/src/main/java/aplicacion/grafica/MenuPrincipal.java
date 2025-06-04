@@ -139,7 +139,7 @@ public class MenuPrincipal {
         Task<List<Hotel>> cargarHotelesTask = new Task<>() {
             @Override
             protected List<Hotel> call() throws Exception {
-                return HotelesData.listar(); // tu método de carga
+                return HotelesData.listar(); 
             }
         };
         cargarHotelesTask.setOnSucceeded(event -> {

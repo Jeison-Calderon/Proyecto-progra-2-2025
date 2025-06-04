@@ -9,7 +9,7 @@ import java.util.List;
 public class HabitacionesData {
     private static final String ARCHIVO = "habitaciones.dat";
 
-    public static synchronized String guardar(String estilo, double precio) {
+    public static synchronized String guardar(String estilo, double precio, String codigoHotel) {
         List<Habitacion> habitaciones = listar();
         for (Habitacion h : habitaciones) {
             if (h.getEstilo().equalsIgnoreCase(estilo) && h.getPrecio() == precio) {

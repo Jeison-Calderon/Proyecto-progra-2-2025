@@ -6,6 +6,7 @@ import aplicacion.domain.Habitacion;
 import aplicacion.domain.Hotel;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -13,8 +14,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.Node;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class MenuPrincipal {
 
@@ -22,6 +22,7 @@ public class MenuPrincipal {
     private TabPane tabPane;
     private BorderPane root;
     private ObservableList<Hotel> hotelesOriginales = FXCollections.observableArrayList();
+    private final Map<String, ObservableList<Habitacion>> habitacionesPorHotel = new HashMap<>();
 
     public BorderPane getVista() {
         root = new BorderPane();
@@ -134,7 +135,22 @@ public class MenuPrincipal {
 
         tablaHoteles.getColumns().addAll(colCodigo, colNombre, colUbicacion, colAccion);
 
-        cargarDatosHoteles(tablaHoteles);
+        // --- CARGA ASÍNCRONA DE HOTELES ---
+        Task<List<Hotel>> cargarHotelesTask = new Task<>() {
+            @Override
+            protected List<Hotel> call() throws Exception {
+                return HotelesData.listar(); // tu método de carga
+            }
+        };
+        cargarHotelesTask.setOnSucceeded(event -> {
+            hotelesOriginales.setAll(cargarHotelesTask.getValue());
+            tablaHoteles.setItems(hotelesOriginales);
+        });
+        cargarHotelesTask.setOnFailed(event -> {
+            mostrarNotificacion("Error cargando hoteles: " + cargarHotelesTask.getException(), false);
+        });
+        new Thread(cargarHotelesTask).start();
+        // --- FIN DE CARGA ASÍNCRONA ---
 
         btnBuscar.setOnAction(e -> {
             String query = txtBuscar.getText().trim().toLowerCase();
@@ -153,23 +169,15 @@ public class MenuPrincipal {
         });
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
-            cargarDatosHoteles(tablaHoteles);
+            tablaHoteles.setItems(hotelesOriginales);
         });
 
         contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevoHotel, areaNotificacion, tablaHoteles);
         return contenedor;
     }
 
-    private void cargarDatosHoteles(TableView<Hotel> tabla) {
-        List<Hotel> hoteles = HotelesData.listar();
-        hotelesOriginales.setAll(hoteles);
-
-        System.out.println("Lista de hoteles recibida:");
-        for (Hotel h : hotelesOriginales) {
-            System.out.println("Hotel: " + h.getNombre() + " | Ubicacion: " + h.getUbicacion());
-        }
-
-        tabla.setItems(hotelesOriginales);
+    private void cargarDatosHoteles() {
+        hotelesOriginales.setAll(HotelesData.listar());
     }
 
     // ========== Vista y lógica para habitaciones ==========
@@ -202,7 +210,8 @@ public class MenuPrincipal {
 
         tablaHabitaciones.getColumns().addAll(colEstilo, colPrecio);
 
-        ObservableList<Habitacion> habitacionesOriginales = FXCollections.observableArrayList();
+        ObservableList<Habitacion> habitacionesOriginales = getHabitacionesHotel(hotel);
+        tablaHabitaciones.setItems(habitacionesOriginales);
 
         ContextMenu menuContextual = new ContextMenu();
         MenuItem itemRegistrar = new MenuItem("Registrar habitación");
@@ -212,21 +221,19 @@ public class MenuPrincipal {
         menuContextual.getItems().addAll(itemRegistrar, itemEditar, itemBorrar);
         tablaHabitaciones.setContextMenu(menuContextual);
 
-        itemRegistrar.setOnAction(e -> registrarHabitacion(tablaHabitaciones, habitacionesOriginales));
+        itemRegistrar.setOnAction(e -> registrarHabitacion(tablaHabitaciones, habitacionesOriginales, hotel));
         itemEditar.setOnAction(e -> {
             Habitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
-                editarHabitacion(habitacionSeleccionada, tablaHabitaciones, habitacionesOriginales);
+                editarHabitacion(habitacionSeleccionada, tablaHabitaciones, habitacionesOriginales, hotel);
             }
         });
         itemBorrar.setOnAction(e -> {
             Habitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
-                confirmarBorradoHabitacion(habitacionSeleccionada, tablaHabitaciones, habitacionesOriginales);
+                confirmarBorradoHabitacion(habitacionSeleccionada, tablaHabitaciones, habitacionesOriginales, hotel);
             }
         });
-
-        cargarHabitacionesSimples(tablaHabitaciones, habitacionesOriginales);
 
         btnBuscar.setOnAction(e -> {
             String query = txtBuscar.getText().trim().toLowerCase();
@@ -245,7 +252,7 @@ public class MenuPrincipal {
         });
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
-            cargarHabitacionesSimples(tablaHabitaciones, habitacionesOriginales);
+            tablaHabitaciones.setItems(habitacionesOriginales);
         });
 
         Button btnVolver = new Button("Volver a lista de hoteles");
@@ -259,15 +266,25 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabHabitaciones);
     }
 
-    private void cargarHabitacionesSimples(TableView<Habitacion> tabla, ObservableList<Habitacion> copiaOriginal) {
-        List<Habitacion> habitaciones = HabitacionesData.listar();
-        copiaOriginal.setAll(habitaciones);
-        tabla.setItems(copiaOriginal);
+    // Carga solo las habitaciones del hotel dado, y cachea el resultado
+    private ObservableList<Habitacion> getHabitacionesHotel(Hotel hotel) {
+        String codigoHotel = hotel.getCodigoHotel();
+        if (!habitacionesPorHotel.containsKey(codigoHotel)) {
+            List<Habitacion> todas = HabitacionesData.listar();
+            ObservableList<Habitacion> delHotel = FXCollections.observableArrayList();
+            for (Habitacion habitacion : todas) {
+                if (codigoHotel.equals(habitacion.getCodigo())) {
+                    delHotel.add(habitacion);
+                }
+            }
+            habitacionesPorHotel.put(codigoHotel, delHotel);
+        }
+        return habitacionesPorHotel.get(codigoHotel);
     }
 
     // ========== CRUD Hotel/Habitación y utilidades ==========
 
-    private void registrarHabitacion(TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales) {
+    private void registrarHabitacion(TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales, Hotel hotel) {
         TextInputDialog dialogEstilo = new TextInputDialog();
         dialogEstilo.setHeaderText("Ingrese el estilo de la habitación:");
         Optional<String> optEstilo = dialogEstilo.showAndWait();
@@ -289,12 +306,13 @@ public class MenuPrincipal {
         try {
             double precio = Double.parseDouble(precioStr);
 
-            String codigo = HabitacionesData.guardar(estilo, precio);
+            String codigo = HabitacionesData.guardar(estilo, precio, hotel.getCodigoHotel());
             if ("duplicado".equals(codigo)) {
                 mostrarNotificacion("✘ Error: Habitación duplicada", false);
             } else {
                 mostrarNotificacion("✔ Habitación registrada con código: " + codigo, true);
-                cargarHabitacionesSimples(tabla, habitacionesOriginales);
+                actualizarHabitacionesHotel(hotel);
+                tabla.setItems(getHabitacionesHotel(hotel));
             }
 
         } catch (NumberFormatException e) {
@@ -302,7 +320,7 @@ public class MenuPrincipal {
         }
     }
 
-    private void editarHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales) {
+    private void editarHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales, Hotel hotel) {
         Tab tabEditar = new Tab("Editar: Habitación " + habitacion.getCodigo());
         tabEditar.setClosable(true);
 
@@ -353,11 +371,12 @@ public class MenuPrincipal {
                 );
                 if (modificado) {
                     mostrarNotificacion("✔ Habitación modificada correctamente", true);
+                    actualizarHabitacionesHotel(hotel);
+                    tabla.setItems(getHabitacionesHotel(hotel));
                 } else {
                     mostrarNotificacion("✘ Error al modificar habitación", false);
                 }
                 tabPane.getTabs().remove(tabEditar);
-                cargarHabitacionesSimples(tabla, habitacionesOriginales);
 
             } catch (NumberFormatException ex) {
                 mostrarNotificacion("El precio debe ser un número válido", false);
@@ -373,7 +392,7 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabEditar);
     }
 
-    private void confirmarBorradoHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales) {
+    private void confirmarBorradoHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales, Hotel hotel) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar eliminar");
         alert.setHeaderText("¿Está seguro que desea eliminar esta habitación?");
@@ -384,7 +403,8 @@ public class MenuPrincipal {
             boolean eliminada = HabitacionesData.eliminar(habitacion.getCodigo());
             if (eliminada) {
                 mostrarNotificacion("✔ Habitación eliminada correctamente", true);
-                cargarHabitacionesSimples(tabla, habitacionesOriginales);
+                actualizarHabitacionesHotel(hotel);
+                tabla.setItems(getHabitacionesHotel(hotel));
             } else {
                 mostrarNotificacion("✘ Error al eliminar habitación", false);
             }
@@ -440,7 +460,7 @@ public class MenuPrincipal {
             mostrarNotificacion("✘ Error: Hotel duplicado", false);
         } else {
             mostrarNotificacion("✔ Hotel registrado con código: " + codigo, true);
-            actualizarTablasHoteles();
+            cargarDatosHoteles();
         }
     }
 
@@ -503,7 +523,7 @@ public class MenuPrincipal {
         boolean modificado = HotelesData.modificar(new Hotel(codigo, nombre, ubicacion));
         if (modificado) {
             mostrarNotificacion("✔ Hotel modificado correctamente", true);
-            actualizarTablasHoteles();
+            cargarDatosHoteles();
         } else {
             mostrarNotificacion("✘ Error al modificar hotel", false);
         }
@@ -520,26 +540,9 @@ public class MenuPrincipal {
             boolean eliminado = HotelesData.eliminar(hotel.getCodigoHotel());
             if (eliminado) {
                 mostrarNotificacion("✔ Hotel eliminado correctamente", true);
-                actualizarTablasHoteles();
+                cargarDatosHoteles();
             } else {
                 mostrarNotificacion("✘ Error al eliminar hotel", false);
-            }
-        }
-    }
-
-    private void actualizarTablasHoteles() {
-        for (Tab tab : tabPane.getTabs()) {
-            if (tab.getText().equals("Gestión de Hoteles")) {
-                VBox content = (VBox) tab.getContent();
-                for (Node node : content.getChildren()) {
-                    if (node instanceof TableView) {
-                        @SuppressWarnings("unchecked")
-                        TableView<Hotel> tabla = (TableView<Hotel>) node;
-                        cargarDatosHoteles(tabla);
-                        break;
-                    }
-                }
-                break;
             }
         }
     }
@@ -553,5 +556,21 @@ public class MenuPrincipal {
         } else {
             txtResultado.setStyle("-fx-control-inner-background: #f8d7da;");
         }
+    }
+
+    // Refresca cache de habitaciones de un hotel específico
+    private void actualizarHabitacionesHotel(Hotel hotel) {
+        String codigoHotel = hotel.getCodigoHotel();
+        List<Habitacion> todas = HabitacionesData.listar();
+        ObservableList<Habitacion> delHotel = FXCollections.observableArrayList();
+        for (Habitacion habitacion : todas) {
+//            if (codigoHotel.equals(h.getCodigoHotel())) {
+//                delHotel.add(h);
+//            }
+            if(codigoHotel.equals(habitacion.getCodigo())) {
+                delHotel.add(habitacion);
+            }
+        }
+        habitacionesPorHotel.put(codigoHotel, delHotel);
     }
 }

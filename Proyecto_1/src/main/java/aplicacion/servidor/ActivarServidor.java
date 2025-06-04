@@ -30,17 +30,28 @@ public class ActivarServidor {
                 DataInputStream in = new DataInputStream(cliente.getInputStream());
                 DataOutputStream out = new DataOutputStream(cliente.getOutputStream());
         ) {
-            String nombreArchivo = in.readUTF();
+            while (true) {
+                String nombreArchivo = in.readUTF();
+                if (nombreArchivo.equals("FIN")) {
+                    break;
+                }
 
-            out.writeUTF("OK");
-            FileOutputStream fos = new FileOutputStream(carpetaDestino + File.separator + nombreArchivo);
-            byte[] buffer = new byte[4096];
-            int leido;
-            while ((leido = in.read(buffer)) > 0) {
-                fos.write(buffer, 0, leido);
+                long tamanoArchivo = in.readLong();
+                out.writeUTF("OK");
+
+                FileOutputStream fos = new FileOutputStream(carpetaDestino + File.separator + nombreArchivo);
+                byte[] buffer = new byte[4096];
+                long bytesRecibidos = 0;
+                while (bytesRecibidos < tamanoArchivo) {
+                    int bytesToRead = (int) Math.min(buffer.length, tamanoArchivo - bytesRecibidos);
+                    int leido = in.read(buffer, 0, bytesToRead);
+                    if (leido == -1) break;
+                    fos.write(buffer, 0, leido);
+                    bytesRecibidos += leido;
+                }
+                fos.close();
+                System.out.println("Archivo recibido: " + nombreArchivo);
             }
-            fos.close();
-            System.out.println("Archivo recibido: " + nombreArchivo);
         } catch (IOException e) {
             System.out.println("Error al recibir archivo: " + e.getMessage());
         } finally {

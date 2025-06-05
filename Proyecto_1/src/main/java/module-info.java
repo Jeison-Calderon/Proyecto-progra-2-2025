@@ -5,16 +5,19 @@ module org.example.proyecto_1 {
     requires org.json;
     requires java.desktop;
 
+    // ✅ ACTUALIZADO: Solo exportar paquetes que existen
     exports aplicacion.grafica;
-    exports aplicacion.domain;
-    exports aplicacion.data;
     exports aplicacion.dto;
     exports aplicacion.util;
     exports aplicacion.servidor;
     exports aplicacion.cliente;
+    exports aplicacion.data;
+    exports aplicacion.servicio;  // ✅ NUEVO: Agregar paquete servicio
 
-    // ✅ CRÍTICO: Estas líneas permiten que JavaFX acceda a tus clases
-    opens aplicacion.domain to javafx.base, javafx.fxml;
+    // ✅ CRÍTICO: Abrir DTOs para JavaFX (ya no domain porque se eliminó)
     opens aplicacion.dto to javafx.base, javafx.fxml;
     opens aplicacion.grafica to javafx.fxml;
+
+    // ✅ OPCIONAL: Abrir data si necesitas serialización avanzada
+    opens aplicacion.data to javafx.base;
 }

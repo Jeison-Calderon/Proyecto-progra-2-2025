@@ -1,9 +1,9 @@
 package aplicacion.grafica;
 
-import aplicacion.data.HabitacionesData;
-import aplicacion.data.HotelesData;
-import aplicacion.domain.Habitacion;
-import aplicacion.domain.Hotel;
+import aplicacion.dto.HabitacionDTO;
+import aplicacion.dto.HotelDTO;
+import aplicacion.servicio.ServicioHabitaciones;
+import aplicacion.servicio.ServicioHoteles;
 import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -13,18 +13,29 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
-import javafx.scene.Node;
 import javafx.util.Duration;
 
 import java.util.*;
 
 public class MenuPrincipal {
 
+    // ✅ SERVICIOS para comunicación con el servidor
+    private ServicioHoteles servicioHoteles;
+    private ServicioHabitaciones servicioHabitaciones;
+
     private TextArea txtResultado;
     private TabPane tabPane;
     private BorderPane root;
-    private ObservableList<Hotel> hotelesOriginales = FXCollections.observableArrayList();
-    private final Map<String, ObservableList<Habitacion>> habitacionesPorHotel = new HashMap<>();
+
+    // ✅ CAMBIO: Usar DTOs en lugar de entidades de dominio
+    private ObservableList<HotelDTO> hotelesOriginales = FXCollections.observableArrayList();
+    private final Map<String, ObservableList<HabitacionDTO>> habitacionesPorHotel = new HashMap<>();
+
+    // ✅ CONSTRUCTOR: Inicializar servicios
+    public MenuPrincipal() {
+        this.servicioHoteles = new ServicioHoteles();
+        this.servicioHabitaciones = new ServicioHabitaciones();
+    }
 
     public BorderPane getVista() {
         root = new BorderPane();
@@ -45,14 +56,12 @@ public class MenuPrincipal {
         txtResultado.setPrefHeight(80);
         txtResultado.setStyle("-fx-control-inner-background: #f8f9fa;");
 
-        Label lblHeader = new Label("Sistema de Gestión de Hoteles");
+        Label lblHeader = new Label("Sistema de Gestión de Hoteles - Cliente");
         lblHeader.getStyleClass().add("header-label");
 
-        // ✅ NUEVO: Header con botón de salida profesional
         BorderPane header = new BorderPane();
         header.setCenter(lblHeader);
 
-        // ✅ NUEVO: Botón de salida elegante
         Button btnSalir = new Button("Salir");
         btnSalir.setStyle(
                 "-fx-background-color: #dc3545; " +
@@ -64,7 +73,6 @@ public class MenuPrincipal {
                         "-fx-cursor: hand;"
         );
 
-        // ✅ Efecto hover
         btnSalir.setOnMouseEntered(e -> btnSalir.setStyle(
                 "-fx-background-color: #c82333; " +
                         "-fx-text-fill: white; " +
@@ -120,38 +128,28 @@ public class MenuPrincipal {
         btnNuevoHotel.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
         btnNuevoHotel.setOnAction(e -> mostrarFormularioNuevoHotel());
 
-        VBox areaNotificacion = new VBox();
-        areaNotificacion.setVisible(false);
-        areaNotificacion.getStyleClass().add("notification");
-        areaNotificacion.setPadding(new Insets(10));
-        areaNotificacion.setStyle("-fx-background-color: #d4edda; -fx-border-color: #c3e6cb; -fx-border-radius: 4px;");
-
-        Label lblMensajeNotificacion = new Label();
-        lblMensajeNotificacion.setStyle("-fx-text-fill: #155724;");
-        areaNotificacion.getChildren().add(lblMensajeNotificacion);
-
-        TableView<Hotel> tablaHoteles = new TableView<>();
+        // ✅ CAMBIO: Tabla usa DTOs
+        TableView<HotelDTO> tablaHoteles = new TableView<>();
         tablaHoteles.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        TableColumn<Hotel, String> colCodigo = new TableColumn<>("ID");
-        colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigoHotel"));
+        TableColumn<HotelDTO, String> colCodigo = new TableColumn<>("ID");
+        colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
 
-        TableColumn<Hotel, String> colNombre = new TableColumn<>("Nombre");
+        TableColumn<HotelDTO, String> colNombre = new TableColumn<>("Nombre");
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
 
-        TableColumn<Hotel, String> colUbicacion = new TableColumn<>("Ubicación");
+        TableColumn<HotelDTO, String> colUbicacion = new TableColumn<>("Ubicación");
         colUbicacion.setCellValueFactory(new PropertyValueFactory<>("ubicacion"));
 
-        // ✅ CORREGIDO: Columna de acciones con botones para todas las filas
-        TableColumn<Hotel, Void> colAccion = new TableColumn<>("Acción");
-        colAccion.setCellFactory(param -> new TableCell<Hotel, Void>() {
+        // ✅ CAMBIO: Columna de acciones con DTOs
+        TableColumn<HotelDTO, Void> colAccion = new TableColumn<>("Acción");
+        colAccion.setCellFactory(param -> new TableCell<HotelDTO, Void>() {
             private final HBox contenedor = new HBox(5);
             private final Button btnInfo = new Button("Habitaciones");
             private final Button btnEditar = new Button("Editar");
             private final Button btnBorrar = new Button("Borrar");
 
             {
-                // Configurar estilos de botones
                 btnInfo.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-pref-width: 90;");
                 btnEditar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-pref-width: 60;");
                 btnBorrar.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-pref-width: 60;");
@@ -167,10 +165,8 @@ public class MenuPrincipal {
                 if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                     setGraphic(null);
                 } else {
-                    // ✅ CORREGIDO: Obtener el hotel de la fila actual
-                    Hotel hotel = getTableRow().getItem();
+                    HotelDTO hotel = getTableRow().getItem();
 
-                    // ✅ CORREGIDO: Configurar eventos para cada fila específica
                     btnInfo.setOnAction(e -> verHabitacionesHotel(hotel));
                     btnEditar.setOnAction(e -> editarHotel(hotel));
                     btnBorrar.setOnAction(e -> confirmarBorradoHotel(hotel));
@@ -182,11 +178,11 @@ public class MenuPrincipal {
 
         tablaHoteles.getColumns().addAll(colCodigo, colNombre, colUbicacion, colAccion);
 
-        // --- CARGA ASÍNCRONA DE HOTELES ---
-        Task<List<Hotel>> cargarHotelesTask = new Task<>() {
+        // ✅ CAMBIO: Carga asíncrona usando servicios
+        Task<List<HotelDTO>> cargarHotelesTask = new Task<>() {
             @Override
-            protected List<Hotel> call() throws Exception {
-                return HotelesData.listar();
+            protected List<HotelDTO> call() throws Exception {
+                return servicioHoteles.listarHoteles();
             }
         };
         cargarHotelesTask.setOnSucceeded(event -> {
@@ -194,18 +190,17 @@ public class MenuPrincipal {
             tablaHoteles.setItems(hotelesOriginales);
         });
         cargarHotelesTask.setOnFailed(event -> {
-            mostrarNotificacion("Error cargando hoteles: " + cargarHotelesTask.getException(), false);
+            mostrarNotificacion("Error conectando al servidor: " + cargarHotelesTask.getException().getMessage(), false);
         });
         new Thread(cargarHotelesTask).start();
-        // --- FIN DE CARGA ASÍNCRONA ---
 
         btnBuscar.setOnAction(e -> {
             String query = txtBuscar.getText().trim().toLowerCase();
             if (query.isEmpty()) {
                 tablaHoteles.setItems(hotelesOriginales);
             } else {
-                ObservableList<Hotel> filtrados = FXCollections.observableArrayList();
-                for (Hotel hotel : hotelesOriginales) {
+                ObservableList<HotelDTO> filtrados = FXCollections.observableArrayList();
+                for (HotelDTO hotel : hotelesOriginales) {
                     if (hotel.getNombre().toLowerCase().contains(query)
                             || hotel.getUbicacion().toLowerCase().contains(query)) {
                         filtrados.add(hotel);
@@ -214,22 +209,31 @@ public class MenuPrincipal {
                 tablaHoteles.setItems(filtrados);
             }
         });
+
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
-            tablaHoteles.setItems(hotelesOriginales);
+            cargarDatosHoteles();
         });
 
-        contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevoHotel, areaNotificacion, tablaHoteles);
+        contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevoHotel, tablaHoteles);
         return contenedor;
     }
 
+    // ✅ CAMBIO: Usar servicios para cargar datos
     private void cargarDatosHoteles() {
-        hotelesOriginales.setAll(HotelesData.listar());
+        Task<List<HotelDTO>> task = new Task<>() {
+            @Override
+            protected List<HotelDTO> call() throws Exception {
+                return servicioHoteles.listarHoteles();
+            }
+        };
+        task.setOnSucceeded(e -> hotelesOriginales.setAll(task.getValue()));
+        task.setOnFailed(e -> mostrarNotificacion("Error cargando hoteles: " + task.getException().getMessage(), false));
+        new Thread(task).start();
     }
 
-    // ========== Vista y lógica para habitaciones ==========
-    private void verHabitacionesHotel(Hotel hotel) {
-        // ✅ NUEVO: Cerrar pestañas temporales antes de abrir nueva
+    // ✅ CAMBIO: Vista de habitaciones con DTOs
+    private void verHabitacionesHotel(HotelDTO hotel) {
         cerrarPestanasTemporales();
 
         Tab tabHabitaciones = new Tab("Habitaciones: " + hotel.getNombre());
@@ -250,17 +254,17 @@ public class MenuPrincipal {
         btnListar.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
         boxBusqueda.getChildren().addAll(txtBuscar, btnBuscar, btnListar);
 
-        TableView<Habitacion> tablaHabitaciones = new TableView<>();
+        TableView<HabitacionDTO> tablaHabitaciones = new TableView<>();
         tablaHabitaciones.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        TableColumn<Habitacion, String> colEstilo = new TableColumn<>("Estilo");
+        TableColumn<HabitacionDTO, String> colEstilo = new TableColumn<>("Estilo");
         colEstilo.setCellValueFactory(new PropertyValueFactory<>("estilo"));
-        TableColumn<Habitacion, Double> colPrecio = new TableColumn<>("Precio");
+        TableColumn<HabitacionDTO, Double> colPrecio = new TableColumn<>("Precio");
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
 
         tablaHabitaciones.getColumns().addAll(colEstilo, colPrecio);
 
-        ObservableList<Habitacion> habitacionesOriginales = getHabitacionesHotel(hotel);
+        ObservableList<HabitacionDTO> habitacionesOriginales = getHabitacionesHotel(hotel);
         tablaHabitaciones.setItems(habitacionesOriginales);
 
         ContextMenu menuContextual = new ContextMenu();
@@ -273,28 +277,27 @@ public class MenuPrincipal {
 
         itemRegistrar.setOnAction(e -> registrarHabitacion(tablaHabitaciones, hotel));
         itemEditar.setOnAction(e -> {
-            Habitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
+            HabitacionDTO habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
                 editarHabitacion(habitacionSeleccionada, tablaHabitaciones, hotel);
             }
         });
         itemBorrar.setOnAction(e -> {
-            Habitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
+            HabitacionDTO habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
                 confirmarBorradoHabitacion(habitacionSeleccionada, tablaHabitaciones, hotel);
             }
         });
 
-        // ✅ CORREGIDO: Eventos de búsqueda y listado de habitaciones
         btnBuscar.setOnAction(e -> {
             String query = txtBuscar.getText().trim().toLowerCase();
-            ObservableList<Habitacion> habitacionesActuales = getHabitacionesHotel(hotel);
+            ObservableList<HabitacionDTO> habitacionesActuales = getHabitacionesHotel(hotel);
 
             if (query.isEmpty()) {
                 tablaHabitaciones.setItems(habitacionesActuales);
             } else {
-                ObservableList<Habitacion> filtrados = FXCollections.observableArrayList();
-                for (Habitacion hab : habitacionesActuales) {
+                ObservableList<HabitacionDTO> filtrados = FXCollections.observableArrayList();
+                for (HabitacionDTO hab : habitacionesActuales) {
                     if (hab.getEstilo().toLowerCase().contains(query)
                             || String.valueOf(hab.getPrecio()).contains(query)) {
                         filtrados.add(hab);
@@ -306,7 +309,6 @@ public class MenuPrincipal {
 
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
-            // ✅ CORREGIDO: Refrescar datos desde la fuente
             actualizarHabitacionesHotel(hotel);
             tablaHabitaciones.setItems(getHabitacionesHotel(hotel));
         });
@@ -314,7 +316,6 @@ public class MenuPrincipal {
         Button btnVolver = new Button("Volver a lista de hoteles");
         btnVolver.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
         btnVolver.setOnAction(e -> {
-            // ✅ NUEVO: Cerrar pestaña y volver a principal
             tabPane.getTabs().remove(tabHabitaciones);
             tabPane.getSelectionModel().selectFirst();
         });
@@ -326,27 +327,31 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabHabitaciones);
     }
 
-    // ✅ CORREGIDO: Carga solo las habitaciones del hotel dado, y cachea el resultado
-    private ObservableList<Habitacion> getHabitacionesHotel(Hotel hotel) {
-        String codigoHotel = hotel.getCodigoHotel();
+    // ✅ CAMBIO: Usar servicios para obtener habitaciones
+    private ObservableList<HabitacionDTO> getHabitacionesHotel(HotelDTO hotel) {
+        String codigoHotel = hotel.getCodigo();
         if (!habitacionesPorHotel.containsKey(codigoHotel)) {
-            List<Habitacion> todas = HabitacionesData.listar();
-            ObservableList<Habitacion> delHotel = FXCollections.observableArrayList();
-            for (Habitacion habitacion : todas) {
-                // ✅ CORREGIDO: Usar getCodigoHotel() en lugar de getCodigo()
-                if (codigoHotel.equals(habitacion.getCodigoHotel())) {
-                    delHotel.add(habitacion);
+            Task<List<HabitacionDTO>> task = new Task<>() {
+                @Override
+                protected List<HabitacionDTO> call() throws Exception {
+                    return servicioHabitaciones.listarHabitacionesPorHotel(codigoHotel);
                 }
+            };
+
+            try {
+                task.run();
+                ObservableList<HabitacionDTO> delHotel = FXCollections.observableArrayList(task.getValue());
+                habitacionesPorHotel.put(codigoHotel, delHotel);
+            } catch (Exception e) {
+                mostrarNotificacion("Error cargando habitaciones: " + e.getMessage(), false);
+                return FXCollections.observableArrayList();
             }
-            habitacionesPorHotel.put(codigoHotel, delHotel);
         }
         return habitacionesPorHotel.get(codigoHotel);
     }
 
-    // ========== CRUD Hotel/Habitación y utilidades ==========
-
-    // ✅ CORREGIDO: Simplificado parámetros del método
-    private void registrarHabitacion(TableView<Habitacion> tabla, Hotel hotel) {
+    // ✅ CAMBIO: Registrar habitación usando servicios
+    private void registrarHabitacion(TableView<HabitacionDTO> tabla, HotelDTO hotel) {
         TextInputDialog dialogEstilo = new TextInputDialog();
         dialogEstilo.setHeaderText("Ingrese el estilo de la habitación:");
         Optional<String> optEstilo = dialogEstilo.showAndWait();
@@ -368,22 +373,38 @@ public class MenuPrincipal {
         try {
             double precio = Double.parseDouble(precioStr);
 
-            String codigo = HabitacionesData.guardar(estilo, precio, hotel.getCodigoHotel());
-            if ("duplicado".equals(codigo)) {
-                mostrarNotificacion("Error: Habitación duplicada", false);
-            } else {
+            Task<String> task = new Task<>() {
+                @Override
+                protected String call() throws Exception {
+                    return servicioHabitaciones.guardarHabitacion(estilo, precio, hotel.getCodigo());
+                }
+            };
+
+            task.setOnSucceeded(e -> {
+                String codigo = task.getValue();
                 mostrarNotificacion("Habitación registrada con código: " + codigo, true);
                 actualizarHabitacionesHotel(hotel);
                 tabla.setItems(getHabitacionesHotel(hotel));
-            }
+            });
+
+            task.setOnFailed(e -> {
+                Throwable exception = task.getException();
+                if (exception instanceof IllegalArgumentException) {
+                    mostrarNotificacion("Error: Habitación duplicada", false);
+                } else {
+                    mostrarNotificacion("Error: " + exception.getMessage(), false);
+                }
+            });
+
+            new Thread(task).start();
 
         } catch (NumberFormatException e) {
             mostrarNotificacion("Precio debe ser numérico válido.", false);
         }
     }
 
-    // ✅ NUEVO: Simplificado parámetros del método con auto-cierre
-    private void editarHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, Hotel hotel) {
+    // ✅ CAMBIO: Editar habitación usando servicios
+    private void editarHabitacion(HabitacionDTO habitacion, TableView<HabitacionDTO> tabla, HotelDTO hotel) {
         Tab tabEditar = new Tab("Editar: Habitación " + habitacion.getCodigo());
         tabEditar.setClosable(true);
 
@@ -429,28 +450,40 @@ public class MenuPrincipal {
                     return;
                 }
 
-                boolean modificado = HabitacionesData.modificar(
-                        new Habitacion(habitacion.getCodigo(), estilo, precio, habitacion.getCodigoHotel())
+                HabitacionDTO habitacionModificada = new HabitacionDTO(
+                        habitacion.getCodigo(), estilo, precio, habitacion.getCodigoHotel()
                 );
-                if (modificado) {
-                    mostrarNotificacion("Habitación modificada correctamente", true);
-                    actualizarHabitacionesHotel(hotel);
-                    tabla.setItems(getHabitacionesHotel(hotel));
-                } else {
-                    mostrarNotificacion("Error al modificar habitación", false);
-                }
-                // ✅ NUEVO: Cerrar pestaña automáticamente después de cualquier acción
-                tabPane.getTabs().remove(tabEditar);
+
+                Task<Boolean> task = new Task<>() {
+                    @Override
+                    protected Boolean call() throws Exception {
+                        return servicioHabitaciones.modificarHabitacion(habitacionModificada);
+                    }
+                };
+
+                task.setOnSucceeded(ev -> {
+                    if (task.getValue()) {
+                        mostrarNotificacion("Habitación modificada correctamente", true);
+                        actualizarHabitacionesHotel(hotel);
+                        tabla.setItems(getHabitacionesHotel(hotel));
+                    } else {
+                        mostrarNotificacion("Error al modificar habitación", false);
+                    }
+                    tabPane.getTabs().remove(tabEditar);
+                });
+
+                task.setOnFailed(ev -> {
+                    mostrarNotificacion("Error: " + task.getException().getMessage(), false);
+                });
+
+                new Thread(task).start();
 
             } catch (NumberFormatException ex) {
                 mostrarNotificacion("El precio debe ser un número válido", false);
             }
         });
 
-        btnVolver.setOnAction(e -> {
-            // ✅ NUEVO: Cerrar pestaña al volver
-            tabPane.getTabs().remove(tabEditar);
-        });
+        btnVolver.setOnAction(e -> tabPane.getTabs().remove(tabEditar));
 
         contenedor.getChildren().addAll(lblTitulo, grid, botonesAccion);
 
@@ -459,8 +492,8 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabEditar);
     }
 
-    // ✅ CORREGIDO: Simplificado parámetros del método
-    private void confirmarBorradoHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, Hotel hotel) {
+    // ✅ CAMBIO: Eliminar habitación usando servicios
+    private void confirmarBorradoHabitacion(HabitacionDTO habitacion, TableView<HabitacionDTO> tabla, HotelDTO hotel) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar eliminar");
         alert.setHeaderText("¿Está seguro que desea eliminar esta habitación?");
@@ -468,19 +501,33 @@ public class MenuPrincipal {
 
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            boolean eliminada = HabitacionesData.eliminar(habitacion.getCodigo());
-            if (eliminada) {
-                mostrarNotificacion("Habitación eliminada correctamente", true);
-                actualizarHabitacionesHotel(hotel);
-                tabla.setItems(getHabitacionesHotel(hotel));
-            } else {
-                mostrarNotificacion("Error al eliminar habitación", false);
-            }
+
+            Task<Boolean> task = new Task<>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    return servicioHabitaciones.eliminarHabitacion(habitacion.getCodigo());
+                }
+            };
+
+            task.setOnSucceeded(e -> {
+                if (task.getValue()) {
+                    mostrarNotificacion("Habitación eliminada correctamente", true);
+                    actualizarHabitacionesHotel(hotel);
+                    tabla.setItems(getHabitacionesHotel(hotel));
+                } else {
+                    mostrarNotificacion("Error al eliminar habitación", false);
+                }
+            });
+
+            task.setOnFailed(e -> mostrarNotificacion("Error: " + task.getException().getMessage(), false));
+
+            new Thread(task).start();
         }
     }
 
+    // ✅ CAMBIO: Crear hotel usando servicios
     private void mostrarFormularioNuevoHotel() {
-        Dialog<Hotel> dialog = new Dialog<>();
+        Dialog<HotelDTO> dialog = new Dialog<>();
         dialog.setTitle("Crear Nuevo Hotel");
         dialog.setHeaderText("Ingrese los datos del nuevo hotel");
 
@@ -505,35 +552,52 @@ public class MenuPrincipal {
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == btnGuardar) {
-                return new Hotel("", txtNombre.getText(), txtUbicacion.getText());
+                return new HotelDTO("", txtNombre.getText(), txtUbicacion.getText());
             }
             return null;
         });
 
-        Optional<Hotel> resultado = dialog.showAndWait();
+        Optional<HotelDTO> resultado = dialog.showAndWait();
 
         resultado.ifPresent(hotel -> {
             registrarHotel(hotel.getNombre(), hotel.getUbicacion());
         });
     }
 
+    // ✅ CAMBIO: Registrar hotel usando servicios
     private void registrarHotel(String nombre, String ubicacion) {
         if (nombre.isEmpty() || ubicacion.isEmpty()) {
             mostrarNotificacion("Todos los campos son obligatorios.", false);
             return;
         }
 
-        String codigo = HotelesData.guardar(nombre, ubicacion);
-        if ("duplicado".equals(codigo)) {
-            mostrarNotificacion("Error: Hotel duplicado", false);
-        } else {
-            mostrarNotificacion("Hotel registrado con código: " + codigo, true);
+        Task<HotelDTO> task = new Task<>() {
+            @Override
+            protected HotelDTO call() throws Exception {
+                return servicioHoteles.guardarHotel(nombre, ubicacion);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            HotelDTO hotelGuardado = task.getValue();
+            mostrarNotificacion("Hotel registrado con código: " + hotelGuardado.getCodigo(), true);
             cargarDatosHoteles();
-        }
+        });
+
+        task.setOnFailed(e -> {
+            Throwable exception = task.getException();
+            if (exception instanceof IllegalArgumentException) {
+                mostrarNotificacion("Error: Hotel duplicado", false);
+            } else {
+                mostrarNotificacion("Error: " + exception.getMessage(), false);
+            }
+        });
+
+        new Thread(task).start();
     }
 
-    private void editarHotel(Hotel hotel) {
-        // ✅ NUEVO: Cerrar pestañas temporales antes de abrir edición
+    // ✅ CAMBIO: Editar hotel usando servicios
+    private void editarHotel(HotelDTO hotel) {
         cerrarPestanasTemporales();
 
         Tab tabEditar = new Tab("Editar: " + hotel.getNombre());
@@ -554,7 +618,7 @@ public class MenuPrincipal {
         TextField txtUbicacion = new TextField(hotel.getUbicacion());
 
         grid.add(new Label("ID:"), 0, 0);
-        grid.add(new Label(hotel.getCodigoHotel()), 1, 0);
+        grid.add(new Label(hotel.getCodigo()), 1, 0);
 
         grid.add(new Label("Nombre:"), 0, 1);
         grid.add(txtNombre, 1, 1);
@@ -572,14 +636,12 @@ public class MenuPrincipal {
         botonesAccion.getChildren().addAll(btnGuardar, btnVolver);
 
         btnGuardar.setOnAction(e -> {
-            modificarHotel(hotel.getCodigoHotel(), txtNombre.getText(), txtUbicacion.getText());
-            // ✅ NUEVO: Cerrar pestaña automáticamente después de guardar
+            modificarHotel(hotel, txtNombre.getText(), txtUbicacion.getText());
             tabPane.getTabs().remove(tabEditar);
-            tabPane.getSelectionModel().selectFirst(); // Volver a la pestaña principal
+            tabPane.getSelectionModel().selectFirst();
         });
 
         btnVolver.setOnAction(e -> {
-            // ✅ NUEVO: Cerrar pestaña al volver
             tabPane.getTabs().remove(tabEditar);
             tabPane.getSelectionModel().selectFirst();
         });
@@ -591,40 +653,68 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabEditar);
     }
 
-    private void modificarHotel(String codigo, String nombre, String ubicacion) {
+    // ✅ CAMBIO: Modificar hotel usando servicios
+    private void modificarHotel(HotelDTO hotelOriginal, String nombre, String ubicacion) {
         if (nombre.isEmpty() || ubicacion.isEmpty()) {
             mostrarNotificacion("Todos los campos son obligatorios.", false);
             return;
         }
 
-        boolean modificado = HotelesData.modificar(new Hotel(codigo, nombre, ubicacion));
-        if (modificado) {
-            mostrarNotificacion("Hotel modificado correctamente", true);
-            cargarDatosHoteles();
-        } else {
-            mostrarNotificacion("Error al modificar hotel", false);
-        }
+        HotelDTO hotelModificado = new HotelDTO(hotelOriginal.getCodigo(), nombre, ubicacion);
+
+        Task<Boolean> task = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                return servicioHoteles.modificarHotel(hotelModificado);
+            }
+        };
+
+        task.setOnSucceeded(e -> {
+            if (task.getValue()) {
+                mostrarNotificacion("Hotel modificado correctamente", true);
+                cargarDatosHoteles();
+            } else {
+                mostrarNotificacion("Error al modificar hotel", false);
+            }
+        });
+
+        task.setOnFailed(e -> mostrarNotificacion("Error: " + task.getException().getMessage(), false));
+
+        new Thread(task).start();
     }
 
-    private void confirmarBorradoHotel(Hotel hotel) {
+    // ✅ CAMBIO: Eliminar hotel usando servicios
+    private void confirmarBorradoHotel(HotelDTO hotel) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar eliminar");
         alert.setHeaderText("¿Está seguro que desea eliminar este hotel?");
-        alert.setContentText("Hotel: " + hotel.getNombre() + " (ID: " + hotel.getCodigoHotel() + ")");
+        alert.setContentText("Hotel: " + hotel.getNombre() + " (ID: " + hotel.getCodigo() + ")");
 
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            boolean eliminado = HotelesData.eliminar(hotel.getCodigoHotel());
-            if (eliminado) {
-                mostrarNotificacion("Hotel eliminado correctamente", true);
-                cargarDatosHoteles();
-            } else {
-                mostrarNotificacion("Error al eliminar hotel", false);
-            }
+
+            Task<Boolean> task = new Task<>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    return servicioHoteles.eliminarHotel(hotel.getCodigo());
+                }
+            };
+
+            task.setOnSucceeded(e -> {
+                if (task.getValue()) {
+                    mostrarNotificacion("Hotel eliminado correctamente", true);
+                    cargarDatosHoteles();
+                } else {
+                    mostrarNotificacion("Error al eliminar hotel", false);
+                }
+            });
+
+            task.setOnFailed(e -> mostrarNotificacion("Error: " + task.getException().getMessage(), false));
+
+            new Thread(task).start();
         }
     }
 
-    // ✅ NUEVO: Método con auto-desaparición de notificaciones
     private void mostrarNotificacion(String mensaje, boolean esExito) {
         txtResultado.clear();
         txtResultado.appendText(mensaje + "\n");
@@ -635,56 +725,55 @@ public class MenuPrincipal {
             txtResultado.setStyle("-fx-control-inner-background: #f8d7da;");
         }
 
-        // ✅ NUEVO: Auto-limpiar después de 3 segundos
         PauseTransition delay = new PauseTransition(Duration.seconds(3.0));
         delay.setOnFinished(event -> {
             txtResultado.clear();
-            txtResultado.setStyle("-fx-control-inner-background: #f8f9fa;"); // Color original
+            txtResultado.setStyle("-fx-control-inner-background: #f8f9fa;");
         });
         delay.play();
     }
 
-    // ✅ NUEVO: Método para confirmar salida con estilo profesional
     private void confirmarSalida() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar Salida");
         alert.setHeaderText("¿Está seguro que desea salir de la aplicación?");
         alert.setContentText("Se cerrarán todas las ventanas abiertas.");
 
-        // ✅ Personalizar botones sin emojis
         ButtonType btnSalir = new ButtonType("Salir", ButtonBar.ButtonData.OK_DONE);
         ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         alert.getDialogPane().getButtonTypes().setAll(btnSalir, btnCancelar);
 
-        // ✅ Estilo del diálogo
         alert.getDialogPane().setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px;");
 
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == btnSalir) {
-            System.exit(0);  // ✅ Salida limpia de la aplicación
+            System.exit(0);
         }
     }
 
-    // ✅ NUEVO: Método para cerrar pestañas temporales
     private void cerrarPestanasTemporales() {
-        // Mantener solo la primera pestaña (Gestión de Hoteles)
         while (tabPane.getTabs().size() > 1) {
             tabPane.getTabs().remove(1);
         }
         tabPane.getSelectionModel().selectFirst();
     }
 
-    // ✅ CORREGIDO: Refresca cache de habitaciones de un hotel específico
-    private void actualizarHabitacionesHotel(Hotel hotel) {
-        String codigoHotel = hotel.getCodigoHotel();
-        List<Habitacion> todas = HabitacionesData.listar();
-        ObservableList<Habitacion> delHotel = FXCollections.observableArrayList();
-        for (Habitacion habitacion : todas) {
-            // ✅ CORREGIDO: Usar getCodigoHotel() en lugar de getCodigo()
-            if (codigoHotel.equals(habitacion.getCodigoHotel())) {
-                delHotel.add(habitacion);
+    // ✅ CAMBIO: Actualizar habitaciones usando servicios
+    private void actualizarHabitacionesHotel(HotelDTO hotel) {
+        Task<List<HabitacionDTO>> task = new Task<>() {
+            @Override
+            protected List<HabitacionDTO> call() throws Exception {
+                return servicioHabitaciones.listarHabitacionesPorHotel(hotel.getCodigo());
             }
-        }
-        habitacionesPorHotel.put(codigoHotel, delHotel);
+        };
+
+        task.setOnSucceeded(e -> {
+            ObservableList<HabitacionDTO> delHotel = FXCollections.observableArrayList(task.getValue());
+            habitacionesPorHotel.put(hotel.getCodigo(), delHotel);
+        });
+
+        task.setOnFailed(e -> mostrarNotificacion("Error actualizando habitaciones: " + task.getException().getMessage(), false));
+
+        new Thread(task).start();
     }
 }

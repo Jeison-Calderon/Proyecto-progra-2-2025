@@ -1,6 +1,6 @@
 package aplicacion.data;
 
-import aplicacion.domain.Hotel;
+import aplicacion.dto.HotelDTO;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -15,17 +15,17 @@ public class HotelesData {
     }
 
     private static int obtenerUltimoCodigo() {
-        List<Hotel> hoteles = listar();
+        List<HotelDTO> hoteles = listar();
         if (hoteles.isEmpty()) return 0;
 
-        String ultimoCodigo = hoteles.get(hoteles.size() - 1).getCodigoHotel();
+        String ultimoCodigo = hoteles.get(hoteles.size() - 1).getCodigo();
         return Integer.parseInt(ultimoCodigo.split("-")[1]);
     }
 
     public static synchronized String guardar(String nombre, String ubicacion) {
-        List<Hotel> hoteles = listar();
+        List<HotelDTO> hoteles = listar();
 
-        for (Hotel h : hoteles) {
+        for (HotelDTO h : hoteles) {
             if (h.getNombre().equalsIgnoreCase(nombre) &&
                     h.getUbicacion().equalsIgnoreCase(ubicacion)) {
                 return "duplicado";
@@ -33,21 +33,21 @@ public class HotelesData {
         }
 
         String codigo = generarCodigo();
-        Hotel nuevo = new Hotel(codigo, nombre, ubicacion);
+        HotelDTO nuevo = new HotelDTO(codigo, nombre, ubicacion);
         hoteles.add(nuevo);
         sobrescribirArchivo(hoteles);
         return codigo;
     }
 
-    public static List<Hotel> listar() {
-        List<Hotel> hoteles = new ArrayList<>();
+    public static List<HotelDTO> listar() {
+        List<HotelDTO> hoteles = new ArrayList<>();
         try (
                 FileInputStream fis = new FileInputStream(ARCHIVO_HOTELES);
                 ObjectInputStream ois = new ObjectInputStream(fis)
         ) {
             while (true) {
                 try {
-                    Hotel hotel = (Hotel) ois.readObject();
+                    HotelDTO hotel = (HotelDTO) ois.readObject();
                     hoteles.add(hotel);
                 } catch (EOFException e) {
                     break;
@@ -59,19 +59,19 @@ public class HotelesData {
     }
 
     public static synchronized boolean eliminar(String codigo) {
-        List<Hotel> hoteles = listar();
-        boolean encontrado = hoteles.removeIf(h -> h.getCodigoHotel().equals(codigo));
+        List<HotelDTO> hoteles = listar();
+        boolean encontrado = hoteles.removeIf(h -> h.getCodigo().equals(codigo));
         if (encontrado) {
             sobrescribirArchivo(hoteles);
         }
         return encontrado;
     }
 
-    public static synchronized boolean modificar(Hotel hotelModificado) {
-        List<Hotel> hoteles = listar();
+    public static synchronized boolean modificar(HotelDTO hotelModificado) {
+        List<HotelDTO> hoteles = listar();
         boolean encontrado = false;
         for (int i = 0; i < hoteles.size(); i++) {
-            if (hoteles.get(i).getCodigoHotel().equals(hotelModificado.getCodigoHotel())) {
+            if (hoteles.get(i).getCodigo().equals(hotelModificado.getCodigo())) {
                 hoteles.set(i, hotelModificado);
                 encontrado = true;
                 break;
@@ -82,22 +82,23 @@ public class HotelesData {
         }
         return encontrado;
     }
-    public static synchronized Hotel buscar(String codigo) {
-        List<Hotel> hoteles = listar();
-        for (Hotel hotel : hoteles) {
-            if (hotel.getCodigoHotel().equalsIgnoreCase(codigo)) {
+
+    public static synchronized HotelDTO buscar(String codigo) {
+        List<HotelDTO> hoteles = listar();
+        for (HotelDTO hotel : hoteles) {
+            if (hotel.getCodigo().equalsIgnoreCase(codigo)) {
                 return hotel;
             }
         }
         return null;
     }
 
-    private static void sobrescribirArchivo(List<Hotel> hoteles) {
+    private static void sobrescribirArchivo(List<HotelDTO> hoteles) {
         try (
                 FileOutputStream fos = new FileOutputStream(ARCHIVO_HOTELES);
                 ObjectOutputStream oos = new ObjectOutputStream(fos)
         ) {
-            for (Hotel h : hoteles) {
+            for (HotelDTO h : hoteles) {
                 oos.writeObject(h);
             }
         } catch (IOException e) {

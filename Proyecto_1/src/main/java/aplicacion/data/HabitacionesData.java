@@ -1,6 +1,6 @@
 package aplicacion.data;
 
-import aplicacion.domain.Habitacion;
+import aplicacion.dto.HabitacionDTO;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -10,10 +10,10 @@ public class HabitacionesData {
     private static final String ARCHIVO = "habitaciones.dat";
 
     public static synchronized String guardar(String estilo, double precio, String codigoHotel) {
-        List<Habitacion> habitaciones = listar();
+        List<HabitacionDTO> habitaciones = listar();
 
         // ✅ CORREGIDO: Validar duplicados SOLO dentro del mismo hotel
-        for (Habitacion h : habitaciones) {
+        for (HabitacionDTO h : habitaciones) {
             if (h.getCodigoHotel().equals(codigoHotel)
                     && h.getEstilo().equalsIgnoreCase(estilo)
                     && h.getPrecio() == precio) {
@@ -25,17 +25,17 @@ public class HabitacionesData {
         String codigo = generarCodigoHabitacion(habitaciones, codigoHotel);
 
         // ✅ CORREGIDO: Constructor completo con codigoHotel
-        habitaciones.add(new Habitacion(codigo, estilo, precio, codigoHotel));
+        habitaciones.add(new HabitacionDTO(codigo, estilo, precio, codigoHotel));
         sobrescribirArchivo(habitaciones);
         return codigo;
     }
 
     // ✅ NUEVO: Generar código específico por hotel
-    private static String generarCodigoHabitacion(List<Habitacion> habitaciones, String codigoHotel) {
+    private static String generarCodigoHabitacion(List<HabitacionDTO> habitaciones, String codigoHotel) {
         int maxNumero = 0;
         String prefijo = codigoHotel.replace("H-", "R") + "-";  // H-001 → R001-
 
-        for (Habitacion h : habitaciones) {
+        for (HabitacionDTO h : habitaciones) {
             if (h.getCodigoHotel().equals(codigoHotel)) {
                 String codigo = h.getCodigo();
                 if (codigo.startsWith(prefijo)) {
@@ -50,13 +50,13 @@ public class HabitacionesData {
         return String.format("%s%03d", prefijo, maxNumero + 1);
     }
 
-    public static List<Habitacion> listar() {
-        List<Habitacion> list = new ArrayList<>();
+    public static List<HabitacionDTO> listar() {
+        List<HabitacionDTO> list = new ArrayList<>();
         try (
                 ObjectInputStream ois = new ObjectInputStream(new FileInputStream(ARCHIVO))
         ) {
             while (true) {
-                list.add((Habitacion) ois.readObject());
+                list.add((HabitacionDTO) ois.readObject());
             }
         } catch (EOFException ignored) {
         } catch (FileNotFoundException e) {
@@ -67,12 +67,12 @@ public class HabitacionesData {
         return list;
     }
 
-    public static synchronized boolean modificar(Habitacion habitacionModificada) {
-        List<Habitacion> habitaciones = listar();
+    public static synchronized boolean modificar(HabitacionDTO habitacionModificada) {
+        List<HabitacionDTO> habitaciones = listar();
         boolean encontrada = false;
 
         for (int i = 0; i < habitaciones.size(); i++) {
-            Habitacion h = habitaciones.get(i);
+            HabitacionDTO h = habitaciones.get(i);
             if (h.getCodigo().equals(habitacionModificada.getCodigo())) {
                 habitaciones.set(i, habitacionModificada);
                 encontrada = true;
@@ -87,7 +87,7 @@ public class HabitacionesData {
     }
 
     public static synchronized boolean eliminar(String codigo) {
-        List<Habitacion> habitaciones = listar();
+        List<HabitacionDTO> habitaciones = listar();
         boolean encontrada = false;
 
         for (int i = 0; i < habitaciones.size(); i++) {
@@ -104,11 +104,11 @@ public class HabitacionesData {
         return encontrada;
     }
 
-    private static void sobrescribirArchivo(List<Habitacion> habitaciones) {
+    private static void sobrescribirArchivo(List<HabitacionDTO> habitaciones) {
         try (
                 ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(ARCHIVO))
         ) {
-            for (Habitacion h : habitaciones) {
+            for (HabitacionDTO h : habitaciones) {
                 oos.writeObject(h);
             }
         } catch (IOException e) {

@@ -2,8 +2,6 @@ package aplicacion.servidor;
 
 import aplicacion.data.HabitacionesData;
 import aplicacion.data.HotelesData;
-import aplicacion.domain.Habitacion;
-import aplicacion.domain.Hotel;
 import aplicacion.dto.HabitacionDTO;
 import aplicacion.dto.HotelDTO;
 import aplicacion.util.JsonUtil;
@@ -12,9 +10,6 @@ import org.json.JSONObject;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ServidorHilos extends Thread {
@@ -42,8 +37,20 @@ public class ServidorHilos extends Thread {
                 case "ELIMINAR_HOTEL":
                     manejarEliminarHotel(entrada, salida);
                     break;
+                case "MODIFICAR_HOTEL":
+                    manejarModificarHotel(entrada, salida);
+                    break;
                 case "LISTAR_HABITACIONES":
                     manejarListarHabitaciones(salida);
+                    break;
+                case "GUARDAR_HABITACION":
+                    manejarGuardarHabitacion(entrada, salida);
+                    break;
+                case "ELIMINAR_HABITACION":
+                    manejarEliminarHabitacion(entrada, salida);
+                    break;
+                case "MODIFICAR_HABITACION":
+                    manejarModificarHabitacion(entrada, salida);
                     break;
                 case "ENVIAR_ARCHIVO":
                     manejarEnviarArchivo(entrada, salida);
@@ -67,13 +74,8 @@ public class ServidorHilos extends Thread {
 
     private void manejarListarHoteles(DataOutputStream salida) throws IOException {
         try {
-            List<Hotel> hotelesReales = HotelesData.listar();
-
-            // Convertir a DTOs
-            List<HotelDTO> hoteles = new ArrayList<>();
-            for (Hotel hotel : hotelesReales) {
-                hoteles.add(new HotelDTO(hotel.getCodigoHotel(), hotel.getNombre(), hotel.getUbicacion()));
-            }
+            // ✅ CORREGIDO: Usar directamente DTOs
+            List<HotelDTO> hoteles = HotelesData.listar();
 
             JSONObject respuesta = new JSONObject();
             respuesta.put("estado", "OK");
@@ -108,19 +110,14 @@ public class ServidorHilos extends Thread {
                 return;
             }
 
-            Hotel hotelGuardado = HotelesData.buscar(codigoGenerado);
+            // ✅ CORREGIDO: Usar directamente DTOs
+            HotelDTO hotelGuardado = HotelesData.buscar(codigoGenerado);
 
             if (hotelGuardado != null) {
                 JSONObject respuesta = new JSONObject();
                 respuesta.put("estado", "OK");
                 respuesta.put("mensaje", "Hotel guardado correctamente");
-
-                HotelDTO hotelGuardadoDTO = new HotelDTO(
-                        hotelGuardado.getCodigoHotel(),
-                        hotelGuardado.getNombre(),
-                        hotelGuardado.getUbicacion()
-                );
-                respuesta.put("hotel", JsonUtil.hotelToJson(hotelGuardadoDTO));
+                respuesta.put("hotel", JsonUtil.hotelToJson(hotelGuardado));
                 salida.writeUTF(respuesta.toString());
             } else {
                 enviarError(salida, "Error: No se pudo recuperar el hotel guardado");
@@ -134,7 +131,6 @@ public class ServidorHilos extends Thread {
     private void manejarEliminarHotel(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String codigo = entrada.readUTF();
-
             boolean eliminado = HotelesData.eliminar(codigo);
 
             JSONObject respuesta = new JSONObject();
@@ -153,21 +149,35 @@ public class ServidorHilos extends Thread {
         }
     }
 
+    // ✅ NUEVO: Método para modificar hotel
+    private void manejarModificarHotel(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String hotelJson = entrada.readUTF();
+            JSONObject jsonHotel = new JSONObject(hotelJson);
+            HotelDTO hotelDTO = JsonUtil.jsonToHotel(jsonHotel);
+
+            boolean modificado = HotelesData.modificar(hotelDTO);
+
+            JSONObject respuesta = new JSONObject();
+            if (modificado) {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Hotel modificado correctamente");
+            } else {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Hotel no encontrado");
+            }
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al modificar hotel: " + e.getMessage());
+        }
+    }
+
     private void manejarListarHabitaciones(DataOutputStream salida) throws IOException {
         try {
-            // ✅ USAR DATOS REALES EN LUGAR DE FALSOS
-            List<Habitacion> habitacionesReales = HabitacionesData.listar();
-
-            // Convertir a DTOs
-            List<HabitacionDTO> habitaciones = new ArrayList<>();
-            for (Habitacion habitacion : habitacionesReales) {
-                habitaciones.add(new HabitacionDTO(
-                        habitacion.getCodigo(),
-                        habitacion.getEstilo(),
-                        habitacion.getPrecio(),
-                        habitacion.getCodigoHotel() // ✅ INCLUIR CÓDIGO DE HOTEL
-                ));
-            }
+            // ✅ CORREGIDO: Usar directamente DTOs
+            List<HabitacionDTO> habitaciones = HabitacionesData.listar();
 
             JSONObject respuesta = new JSONObject();
             respuesta.put("estado", "OK");
@@ -175,12 +185,7 @@ public class ServidorHilos extends Thread {
 
             JSONArray habitacionesJson = new JSONArray();
             for (HabitacionDTO habitacion : habitaciones) {
-                JSONObject habJson = new JSONObject();
-                habJson.put("codigo", habitacion.getCodigo());
-                habJson.put("estilo", habitacion.getEstilo());
-                habJson.put("precio", habitacion.getPrecio());
-                habJson.put("codigoHotel", habitacion.getCodigoHotel()); // ✅ INCLUIR
-                habitacionesJson.put(habJson);
+                habitacionesJson.put(JsonUtil.habitacionToJson(habitacion));
             }
             respuesta.put("habitaciones", habitacionesJson);
 
@@ -188,6 +193,82 @@ public class ServidorHilos extends Thread {
 
         } catch (Exception e) {
             enviarError(salida, "Error al listar habitaciones: " + e.getMessage());
+        }
+    }
+
+    // ✅ NUEVO: Método para guardar habitación
+    private void manejarGuardarHabitacion(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String habitacionJson = entrada.readUTF();
+            JSONObject jsonHab = new JSONObject(habitacionJson);
+
+            String estilo = jsonHab.getString("estilo");
+            double precio = jsonHab.getDouble("precio");
+            String codigoHotel = jsonHab.getString("codigoHotel");
+
+            String codigo = HabitacionesData.guardar(estilo, precio, codigoHotel);
+
+            JSONObject respuesta = new JSONObject();
+            if ("duplicado".equals(codigo)) {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Habitación duplicada");
+            } else {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Habitación guardada correctamente");
+                respuesta.put("codigo", codigo);
+            }
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al guardar habitación: " + e.getMessage());
+        }
+    }
+
+    // ✅ NUEVO: Método para eliminar habitación
+    private void manejarEliminarHabitacion(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String codigo = entrada.readUTF();
+            boolean eliminada = HabitacionesData.eliminar(codigo);
+
+            JSONObject respuesta = new JSONObject();
+            if (eliminada) {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Habitación eliminada correctamente");
+            } else {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Habitación no encontrada");
+            }
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al eliminar habitación: " + e.getMessage());
+        }
+    }
+
+    // ✅ NUEVO: Método para modificar habitación
+    private void manejarModificarHabitacion(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String habitacionJson = entrada.readUTF();
+            JSONObject jsonHab = new JSONObject(habitacionJson);
+            HabitacionDTO habitacionDTO = JsonUtil.jsonToHabitacion(jsonHab);
+
+            boolean modificada = HabitacionesData.modificar(habitacionDTO);
+
+            JSONObject respuesta = new JSONObject();
+            if (modificada) {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Habitación modificada correctamente");
+            } else {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Habitación no encontrada");
+            }
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al modificar habitación: " + e.getMessage());
         }
     }
 

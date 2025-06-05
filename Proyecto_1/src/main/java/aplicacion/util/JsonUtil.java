@@ -48,12 +48,13 @@ public class JsonUtil {
         return hoteles;
     }
 
-    // Métodos similares para HabitacionDTO
+    // ✅ ACTUALIZADO: Métodos de HabitacionDTO con codigoHotel
     public static JSONObject habitacionToJson(HabitacionDTO habitacion) {
         JSONObject json = new JSONObject();
         json.put("codigo", habitacion.getCodigo());
         json.put("estilo", habitacion.getEstilo());
         json.put("precio", habitacion.getPrecio());
+        json.put("codigoHotel", habitacion.getCodigoHotel()); // ✅ AGREGADO
         return json;
     }
 
@@ -61,7 +62,8 @@ public class JsonUtil {
         String codigo = json.optString("codigo", "");
         String estilo = json.optString("estilo", "");
         double precio = json.optDouble("precio", 0.0);
-        return new HabitacionDTO(codigo, estilo, precio);
+        String codigoHotel = json.optString("codigoHotel", ""); // ✅ AGREGADO
+        return new HabitacionDTO(codigo, estilo, precio, codigoHotel); // ✅ PARÁMETRO AGREGADO
     }
 
     public static JSONArray habitacionesToJson(List<HabitacionDTO> habitaciones) {

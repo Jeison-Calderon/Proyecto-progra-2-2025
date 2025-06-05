@@ -11,15 +11,43 @@ public class HabitacionesData {
 
     public static synchronized String guardar(String estilo, double precio, String codigoHotel) {
         List<Habitacion> habitaciones = listar();
+
+        // ✅ CORREGIDO: Validar duplicados SOLO dentro del mismo hotel
         for (Habitacion h : habitaciones) {
-            if (h.getEstilo().equalsIgnoreCase(estilo) && h.getPrecio() == precio) {
+            if (h.getCodigoHotel().equals(codigoHotel)
+                    && h.getEstilo().equalsIgnoreCase(estilo)
+                    && h.getPrecio() == precio) {
                 return "duplicado";
             }
         }
-        String codigo = String.format("R-%03d", habitaciones.size() + 1);
-        habitaciones.add(new Habitacion(codigo, estilo, precio));
+
+        // ✅ CORREGIDO: Generar código específico por hotel
+        String codigo = generarCodigoHabitacion(habitaciones, codigoHotel);
+
+        // ✅ CORREGIDO: Constructor completo con codigoHotel
+        habitaciones.add(new Habitacion(codigo, estilo, precio, codigoHotel));
         sobrescribirArchivo(habitaciones);
         return codigo;
+    }
+
+    // ✅ NUEVO: Generar código específico por hotel
+    private static String generarCodigoHabitacion(List<Habitacion> habitaciones, String codigoHotel) {
+        int maxNumero = 0;
+        String prefijo = codigoHotel.replace("H-", "R") + "-";  // H-001 → R001-
+
+        for (Habitacion h : habitaciones) {
+            if (h.getCodigoHotel().equals(codigoHotel)) {
+                String codigo = h.getCodigo();
+                if (codigo.startsWith(prefijo)) {
+                    try {
+                        int numero = Integer.parseInt(codigo.substring(prefijo.length()));
+                        maxNumero = Math.max(maxNumero, numero);
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+
+        return String.format("%s%03d", prefijo, maxNumero + 1);
     }
 
     public static List<Habitacion> listar() {

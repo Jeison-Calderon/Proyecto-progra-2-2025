@@ -227,27 +227,30 @@ public class MenuPrincipal {
         menuContextual.getItems().addAll(itemRegistrar, itemEditar, itemBorrar);
         tablaHabitaciones.setContextMenu(menuContextual);
 
-        itemRegistrar.setOnAction(e -> registrarHabitacion(tablaHabitaciones, habitacionesOriginales, hotel));
+        itemRegistrar.setOnAction(e -> registrarHabitacion(tablaHabitaciones, hotel));
         itemEditar.setOnAction(e -> {
             Habitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
-                editarHabitacion(habitacionSeleccionada, tablaHabitaciones, habitacionesOriginales, hotel);
+                editarHabitacion(habitacionSeleccionada, tablaHabitaciones, hotel);
             }
         });
         itemBorrar.setOnAction(e -> {
             Habitacion habitacionSeleccionada = tablaHabitaciones.getSelectionModel().getSelectedItem();
             if (habitacionSeleccionada != null) {
-                confirmarBorradoHabitacion(habitacionSeleccionada, tablaHabitaciones, habitacionesOriginales, hotel);
+                confirmarBorradoHabitacion(habitacionSeleccionada, tablaHabitaciones, hotel);
             }
         });
 
+        // ✅ CORREGIDO: Eventos de búsqueda y listado de habitaciones
         btnBuscar.setOnAction(e -> {
             String query = txtBuscar.getText().trim().toLowerCase();
+            ObservableList<Habitacion> habitacionesActuales = getHabitacionesHotel(hotel);
+
             if (query.isEmpty()) {
-                tablaHabitaciones.setItems(habitacionesOriginales);
+                tablaHabitaciones.setItems(habitacionesActuales);
             } else {
                 ObservableList<Habitacion> filtrados = FXCollections.observableArrayList();
-                for (Habitacion hab : habitacionesOriginales) {
+                for (Habitacion hab : habitacionesActuales) {
                     if (hab.getEstilo().toLowerCase().contains(query)
                             || String.valueOf(hab.getPrecio()).contains(query)) {
                         filtrados.add(hab);
@@ -256,9 +259,12 @@ public class MenuPrincipal {
                 tablaHabitaciones.setItems(filtrados);
             }
         });
+
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
-            tablaHabitaciones.setItems(habitacionesOriginales);
+            // ✅ CORREGIDO: Refrescar datos desde la fuente
+            actualizarHabitacionesHotel(hotel);
+            tablaHabitaciones.setItems(getHabitacionesHotel(hotel));
         });
 
         Button btnVolver = new Button("Volver a lista de hoteles");
@@ -291,7 +297,8 @@ public class MenuPrincipal {
 
     // ========== CRUD Hotel/Habitación y utilidades ==========
 
-    private void registrarHabitacion(TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales, Hotel hotel) {
+    // ✅ CORREGIDO: Simplificado parámetros del método
+    private void registrarHabitacion(TableView<Habitacion> tabla, Hotel hotel) {
         TextInputDialog dialogEstilo = new TextInputDialog();
         dialogEstilo.setHeaderText("Ingrese el estilo de la habitación:");
         Optional<String> optEstilo = dialogEstilo.showAndWait();
@@ -327,7 +334,8 @@ public class MenuPrincipal {
         }
     }
 
-    private void editarHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales, Hotel hotel) {
+    // ✅ CORREGIDO: Simplificado parámetros del método
+    private void editarHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, Hotel hotel) {
         Tab tabEditar = new Tab("Editar: Habitación " + habitacion.getCodigo());
         tabEditar.setClosable(true);
 
@@ -399,7 +407,8 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabEditar);
     }
 
-    private void confirmarBorradoHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, ObservableList<Habitacion> habitacionesOriginales, Hotel hotel) {
+    // ✅ CORREGIDO: Simplificado parámetros del método
+    private void confirmarBorradoHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, Hotel hotel) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar eliminar");
         alert.setHeaderText("¿Está seguro que desea eliminar esta habitación?");

@@ -43,7 +43,7 @@ public class AplicacionCliente extends Application {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error de Conexión");
             alert.setHeaderText("No se pudo conectar al servidor");
-            alert.setContentText("Verifique que el servidor esté ejecutándose en 10.59.18.141:5001\n\nError: " + e.getMessage());
+            alert.setContentText("Verifique que el servidor esté ejecutándose en la IP y puerto correcto\n\nError: " + e.getMessage());
             alert.showAndWait();
             System.exit(1);
         }

@@ -4,6 +4,7 @@ import aplicacion.data.HabitacionesData;
 import aplicacion.data.HotelesData;
 import aplicacion.domain.Habitacion;
 import aplicacion.domain.Hotel;
+import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -13,6 +14,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.Node;
+import javafx.util.Duration;
 
 import java.util.*;
 
@@ -45,8 +47,47 @@ public class MenuPrincipal {
 
         Label lblHeader = new Label("Sistema de Gestión de Hoteles");
         lblHeader.getStyleClass().add("header-label");
+
+        // ✅ NUEVO: Header con botón de salida profesional
         BorderPane header = new BorderPane();
         header.setCenter(lblHeader);
+
+        // ✅ NUEVO: Botón de salida elegante
+        Button btnSalir = new Button("Salir");
+        btnSalir.setStyle(
+                "-fx-background-color: #dc3545; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 16; " +
+                        "-fx-border-radius: 4; " +
+                        "-fx-background-radius: 4; " +
+                        "-fx-cursor: hand;"
+        );
+
+        // ✅ Efecto hover
+        btnSalir.setOnMouseEntered(e -> btnSalir.setStyle(
+                "-fx-background-color: #c82333; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 16; " +
+                        "-fx-border-radius: 4; " +
+                        "-fx-background-radius: 4; " +
+                        "-fx-cursor: hand;"
+        ));
+
+        btnSalir.setOnMouseExited(e -> btnSalir.setStyle(
+                "-fx-background-color: #dc3545; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-weight: bold; " +
+                        "-fx-padding: 8 16; " +
+                        "-fx-border-radius: 4; " +
+                        "-fx-background-radius: 4; " +
+                        "-fx-cursor: hand;"
+        ));
+
+        btnSalir.setOnAction(e -> confirmarSalida());
+
+        header.setRight(btnSalir);
         header.setPadding(new Insets(10));
         header.setStyle("-fx-background-color: #343a40; -fx-text-fill: white;");
         lblHeader.setStyle("-fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: bold;");
@@ -188,6 +229,9 @@ public class MenuPrincipal {
 
     // ========== Vista y lógica para habitaciones ==========
     private void verHabitacionesHotel(Hotel hotel) {
+        // ✅ NUEVO: Cerrar pestañas temporales antes de abrir nueva
+        cerrarPestanasTemporales();
+
         Tab tabHabitaciones = new Tab("Habitaciones: " + hotel.getNombre());
         tabHabitaciones.setClosable(true);
 
@@ -269,7 +313,11 @@ public class MenuPrincipal {
 
         Button btnVolver = new Button("Volver a lista de hoteles");
         btnVolver.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
-        btnVolver.setOnAction(e -> tabPane.getSelectionModel().selectFirst());
+        btnVolver.setOnAction(e -> {
+            // ✅ NUEVO: Cerrar pestaña y volver a principal
+            tabPane.getTabs().remove(tabHabitaciones);
+            tabPane.getSelectionModel().selectFirst();
+        });
 
         contenedor.getChildren().addAll(lblTitulo, boxBusqueda, tablaHabitaciones, btnVolver);
 
@@ -322,9 +370,9 @@ public class MenuPrincipal {
 
             String codigo = HabitacionesData.guardar(estilo, precio, hotel.getCodigoHotel());
             if ("duplicado".equals(codigo)) {
-                mostrarNotificacion("✘ Error: Habitación duplicada", false);
+                mostrarNotificacion("Error: Habitación duplicada", false);
             } else {
-                mostrarNotificacion("✔ Habitación registrada con código: " + codigo, true);
+                mostrarNotificacion("Habitación registrada con código: " + codigo, true);
                 actualizarHabitacionesHotel(hotel);
                 tabla.setItems(getHabitacionesHotel(hotel));
             }
@@ -334,7 +382,7 @@ public class MenuPrincipal {
         }
     }
 
-    // ✅ CORREGIDO: Simplificado parámetros del método
+    // ✅ NUEVO: Simplificado parámetros del método con auto-cierre
     private void editarHabitacion(Habitacion habitacion, TableView<Habitacion> tabla, Hotel hotel) {
         Tab tabEditar = new Tab("Editar: Habitación " + habitacion.getCodigo());
         tabEditar.setClosable(true);
@@ -385,12 +433,13 @@ public class MenuPrincipal {
                         new Habitacion(habitacion.getCodigo(), estilo, precio, habitacion.getCodigoHotel())
                 );
                 if (modificado) {
-                    mostrarNotificacion("✔ Habitación modificada correctamente", true);
+                    mostrarNotificacion("Habitación modificada correctamente", true);
                     actualizarHabitacionesHotel(hotel);
                     tabla.setItems(getHabitacionesHotel(hotel));
                 } else {
-                    mostrarNotificacion("✘ Error al modificar habitación", false);
+                    mostrarNotificacion("Error al modificar habitación", false);
                 }
+                // ✅ NUEVO: Cerrar pestaña automáticamente después de cualquier acción
                 tabPane.getTabs().remove(tabEditar);
 
             } catch (NumberFormatException ex) {
@@ -398,7 +447,10 @@ public class MenuPrincipal {
             }
         });
 
-        btnVolver.setOnAction(e -> tabPane.getTabs().remove(tabEditar));
+        btnVolver.setOnAction(e -> {
+            // ✅ NUEVO: Cerrar pestaña al volver
+            tabPane.getTabs().remove(tabEditar);
+        });
 
         contenedor.getChildren().addAll(lblTitulo, grid, botonesAccion);
 
@@ -418,11 +470,11 @@ public class MenuPrincipal {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             boolean eliminada = HabitacionesData.eliminar(habitacion.getCodigo());
             if (eliminada) {
-                mostrarNotificacion("✔ Habitación eliminada correctamente", true);
+                mostrarNotificacion("Habitación eliminada correctamente", true);
                 actualizarHabitacionesHotel(hotel);
                 tabla.setItems(getHabitacionesHotel(hotel));
             } else {
-                mostrarNotificacion("✘ Error al eliminar habitación", false);
+                mostrarNotificacion("Error al eliminar habitación", false);
             }
         }
     }
@@ -473,14 +525,17 @@ public class MenuPrincipal {
 
         String codigo = HotelesData.guardar(nombre, ubicacion);
         if ("duplicado".equals(codigo)) {
-            mostrarNotificacion("✘ Error: Hotel duplicado", false);
+            mostrarNotificacion("Error: Hotel duplicado", false);
         } else {
-            mostrarNotificacion("✔ Hotel registrado con código: " + codigo, true);
+            mostrarNotificacion("Hotel registrado con código: " + codigo, true);
             cargarDatosHoteles();
         }
     }
 
     private void editarHotel(Hotel hotel) {
+        // ✅ NUEVO: Cerrar pestañas temporales antes de abrir edición
+        cerrarPestanasTemporales();
+
         Tab tabEditar = new Tab("Editar: " + hotel.getNombre());
         tabEditar.setClosable(true);
 
@@ -518,10 +573,16 @@ public class MenuPrincipal {
 
         btnGuardar.setOnAction(e -> {
             modificarHotel(hotel.getCodigoHotel(), txtNombre.getText(), txtUbicacion.getText());
-            tabPane.getSelectionModel().selectFirst();
+            // ✅ NUEVO: Cerrar pestaña automáticamente después de guardar
+            tabPane.getTabs().remove(tabEditar);
+            tabPane.getSelectionModel().selectFirst(); // Volver a la pestaña principal
         });
 
-        btnVolver.setOnAction(e -> tabPane.getSelectionModel().selectFirst());
+        btnVolver.setOnAction(e -> {
+            // ✅ NUEVO: Cerrar pestaña al volver
+            tabPane.getTabs().remove(tabEditar);
+            tabPane.getSelectionModel().selectFirst();
+        });
 
         contenedor.getChildren().addAll(lblTitulo, grid, botonesAccion);
 
@@ -538,10 +599,10 @@ public class MenuPrincipal {
 
         boolean modificado = HotelesData.modificar(new Hotel(codigo, nombre, ubicacion));
         if (modificado) {
-            mostrarNotificacion("✔ Hotel modificado correctamente", true);
+            mostrarNotificacion("Hotel modificado correctamente", true);
             cargarDatosHoteles();
         } else {
-            mostrarNotificacion("✘ Error al modificar hotel", false);
+            mostrarNotificacion("Error al modificar hotel", false);
         }
     }
 
@@ -555,14 +616,15 @@ public class MenuPrincipal {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             boolean eliminado = HotelesData.eliminar(hotel.getCodigoHotel());
             if (eliminado) {
-                mostrarNotificacion("✔ Hotel eliminado correctamente", true);
+                mostrarNotificacion("Hotel eliminado correctamente", true);
                 cargarDatosHoteles();
             } else {
-                mostrarNotificacion("✘ Error al eliminar hotel", false);
+                mostrarNotificacion("Error al eliminar hotel", false);
             }
         }
     }
 
+    // ✅ NUEVO: Método con auto-desaparición de notificaciones
     private void mostrarNotificacion(String mensaje, boolean esExito) {
         txtResultado.clear();
         txtResultado.appendText(mensaje + "\n");
@@ -572,6 +634,44 @@ public class MenuPrincipal {
         } else {
             txtResultado.setStyle("-fx-control-inner-background: #f8d7da;");
         }
+
+        // ✅ NUEVO: Auto-limpiar después de 3 segundos
+        PauseTransition delay = new PauseTransition(Duration.seconds(3.0));
+        delay.setOnFinished(event -> {
+            txtResultado.clear();
+            txtResultado.setStyle("-fx-control-inner-background: #f8f9fa;"); // Color original
+        });
+        delay.play();
+    }
+
+    // ✅ NUEVO: Método para confirmar salida con estilo profesional
+    private void confirmarSalida() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmar Salida");
+        alert.setHeaderText("¿Está seguro que desea salir de la aplicación?");
+        alert.setContentText("Se cerrarán todas las ventanas abiertas.");
+
+        // ✅ Personalizar botones sin emojis
+        ButtonType btnSalir = new ButtonType("Salir", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getDialogPane().getButtonTypes().setAll(btnSalir, btnCancelar);
+
+        // ✅ Estilo del diálogo
+        alert.getDialogPane().setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px;");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == btnSalir) {
+            System.exit(0);  // ✅ Salida limpia de la aplicación
+        }
+    }
+
+    // ✅ NUEVO: Método para cerrar pestañas temporales
+    private void cerrarPestanasTemporales() {
+        // Mantener solo la primera pestaña (Gestión de Hoteles)
+        while (tabPane.getTabs().size() > 1) {
+            tabPane.getTabs().remove(1);
+        }
+        tabPane.getSelectionModel().selectFirst();
     }
 
     // ✅ CORREGIDO: Refresca cache de habitaciones de un hotel específico

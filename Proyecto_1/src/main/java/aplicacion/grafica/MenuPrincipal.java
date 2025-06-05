@@ -101,6 +101,7 @@ public class MenuPrincipal {
         TableColumn<Hotel, String> colUbicacion = new TableColumn<>("Ubicación");
         colUbicacion.setCellValueFactory(new PropertyValueFactory<>("ubicacion"));
 
+        // ✅ CORREGIDO: Columna de acciones con botones para todas las filas
         TableColumn<Hotel, Void> colAccion = new TableColumn<>("Acción");
         colAccion.setCellFactory(param -> new TableCell<Hotel, Void>() {
             private final HBox contenedor = new HBox(5);
@@ -109,14 +110,10 @@ public class MenuPrincipal {
             private final Button btnBorrar = new Button("Borrar");
 
             {
-                btnInfo.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white;");
-                btnInfo.setOnAction(e -> verHabitacionesHotel(getTableView().getItems().get(getIndex())));
-
-                btnEditar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
-                btnEditar.setOnAction(e -> editarHotel(getTableView().getItems().get(getIndex())));
-
-                btnBorrar.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
-                btnBorrar.setOnAction(e -> confirmarBorradoHotel(getTableView().getItems().get(getIndex())));
+                // Configurar estilos de botones
+                btnInfo.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-pref-width: 90;");
+                btnEditar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-pref-width: 60;");
+                btnBorrar.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-pref-width: 60;");
 
                 contenedor.getChildren().addAll(btnInfo, btnEditar, btnBorrar);
                 contenedor.setAlignment(Pos.CENTER);
@@ -125,9 +122,18 @@ public class MenuPrincipal {
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
+
+                if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                     setGraphic(null);
                 } else {
+                    // ✅ CORREGIDO: Obtener el hotel de la fila actual
+                    Hotel hotel = getTableRow().getItem();
+
+                    // ✅ CORREGIDO: Configurar eventos para cada fila específica
+                    btnInfo.setOnAction(e -> verHabitacionesHotel(hotel));
+                    btnEditar.setOnAction(e -> editarHotel(hotel));
+                    btnBorrar.setOnAction(e -> confirmarBorradoHotel(hotel));
+
                     setGraphic(contenedor);
                 }
             }
@@ -139,7 +145,7 @@ public class MenuPrincipal {
         Task<List<Hotel>> cargarHotelesTask = new Task<>() {
             @Override
             protected List<Hotel> call() throws Exception {
-                return HotelesData.listar(); 
+                return HotelesData.listar();
             }
         };
         cargarHotelesTask.setOnSucceeded(event -> {
@@ -266,14 +272,15 @@ public class MenuPrincipal {
         tabPane.getSelectionModel().select(tabHabitaciones);
     }
 
-    // Carga solo las habitaciones del hotel dado, y cachea el resultado
+    // ✅ CORREGIDO: Carga solo las habitaciones del hotel dado, y cachea el resultado
     private ObservableList<Habitacion> getHabitacionesHotel(Hotel hotel) {
         String codigoHotel = hotel.getCodigoHotel();
         if (!habitacionesPorHotel.containsKey(codigoHotel)) {
             List<Habitacion> todas = HabitacionesData.listar();
             ObservableList<Habitacion> delHotel = FXCollections.observableArrayList();
             for (Habitacion habitacion : todas) {
-                if (codigoHotel.equals(habitacion.getCodigo())) {
+                // ✅ CORREGIDO: Usar getCodigoHotel() en lugar de getCodigo()
+                if (codigoHotel.equals(habitacion.getCodigoHotel())) {
                     delHotel.add(habitacion);
                 }
             }
@@ -367,7 +374,7 @@ public class MenuPrincipal {
                 }
 
                 boolean modificado = HabitacionesData.modificar(
-                        new Habitacion(habitacion.getCodigo(), estilo, precio)
+                        new Habitacion(habitacion.getCodigo(), estilo, precio, habitacion.getCodigoHotel())
                 );
                 if (modificado) {
                     mostrarNotificacion("✔ Habitación modificada correctamente", true);
@@ -558,16 +565,14 @@ public class MenuPrincipal {
         }
     }
 
-    // Refresca cache de habitaciones de un hotel específico
+    // ✅ CORREGIDO: Refresca cache de habitaciones de un hotel específico
     private void actualizarHabitacionesHotel(Hotel hotel) {
         String codigoHotel = hotel.getCodigoHotel();
         List<Habitacion> todas = HabitacionesData.listar();
         ObservableList<Habitacion> delHotel = FXCollections.observableArrayList();
         for (Habitacion habitacion : todas) {
-//            if (codigoHotel.equals(h.getCodigoHotel())) {
-//                delHotel.add(h);
-//            }
-            if(codigoHotel.equals(habitacion.getCodigo())) {
+            // ✅ CORREGIDO: Usar getCodigoHotel() en lugar de getCodigo()
+            if (codigoHotel.equals(habitacion.getCodigoHotel())) {
                 delHotel.add(habitacion);
             }
         }

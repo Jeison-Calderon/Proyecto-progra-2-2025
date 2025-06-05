@@ -38,7 +38,7 @@ public class GraficaPrincipal extends Application {
             try {
                 InetAddress inetAddress = InetAddress.getLocalHost();
                 System.out.println("IP del cliente: " + inetAddress.getHostAddress());
-                Socket echoSocket = new Socket("192.168.100.8",5001);
+                Socket echoSocket = new Socket("10.59.18.141",5001);
                 PrintWriter writer = new PrintWriter(echoSocket.getOutputStream(), true);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(echoSocket.getInputStream()));
                 String entrada = reader.readLine();

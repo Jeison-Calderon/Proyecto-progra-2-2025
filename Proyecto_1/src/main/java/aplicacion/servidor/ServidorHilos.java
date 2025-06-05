@@ -1,182 +1,224 @@
 package aplicacion.servidor;
 
+import aplicacion.data.HabitacionesData;
+import aplicacion.data.HotelesData;
+import aplicacion.domain.Habitacion;
+import aplicacion.domain.Hotel;
 import aplicacion.dto.HabitacionDTO;
 import aplicacion.dto.HotelDTO;
-import aplicacion.dto.RespuestaDTO;
 import aplicacion.util.JsonUtil;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import org.json.JSONObject;
 
 public class ServidorHilos extends Thread {
-    private Socket socket;
-    private static final String CARPETA_ARCHIVOS = "archivos_recibidos";
+    private Socket cliente;
 
-    public ServidorHilos(Socket socket) {
-        super("ServidorHilos");
-        this.socket = socket;
+    public ServidorHilos(Socket cliente) {
+        this.cliente = cliente;
     }
 
+    @Override
     public void run() {
-        try (
-                DataInputStream entrada = new DataInputStream(socket.getInputStream());
-                DataOutputStream salida = new DataOutputStream(socket.getOutputStream())
-        ) {
-            // Leer el tipo de operación solicitada
-            String operacion = entrada.readUTF();
-            System.out.println("Operación solicitada: " + operacion);
+        try (DataInputStream entrada = new DataInputStream(cliente.getInputStream());
+             DataOutputStream salida = new DataOutputStream(cliente.getOutputStream())) {
 
-            // Procesar según el tipo de operación
-            switch(operacion) {
-                case "ENVIAR_ARCHIVO":
-                    procesarEnvioArchivo(entrada, salida);
-                    break;
+            String operacion = entrada.readUTF();
+            System.out.println("Operación recibida: " + operacion);
+
+            switch (operacion) {
                 case "LISTAR_HOTELES":
-                    enviarListaHoteles(salida);
+                    manejarListarHoteles(salida);
                     break;
                 case "GUARDAR_HOTEL":
-                    procesarGuardarHotel(entrada, salida);
+                    manejarGuardarHotel(entrada, salida);
                     break;
                 case "ELIMINAR_HOTEL":
-                    procesarEliminarHotel(entrada, salida);
+                    manejarEliminarHotel(entrada, salida);
                     break;
                 case "LISTAR_HABITACIONES":
-                    enviarListaHabitaciones(salida);
+                    manejarListarHabitaciones(salida);
+                    break;
+                case "ENVIAR_ARCHIVO":
+                    manejarEnviarArchivo(entrada, salida);
                     break;
                 default:
-                    RespuestaDTO<Object> respuestaError = new RespuestaDTO<>("ERROR", "Operación no reconocida");
-                    salida.writeUTF(new JSONObject(respuestaError).toString());
+                    enviarError(salida, "Operación no reconocida: " + operacion);
+                    break;
             }
 
         } catch (IOException e) {
-            System.err.println("Error en hilo del servidor: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Error manejando cliente: " + e.getMessage());
         } finally {
             try {
-                socket.close();
+                cliente.close();
+                System.out.println("Cliente desconectado");
             } catch (IOException e) {
-                System.err.println("Error al cerrar el socket: " + e.getMessage());
+                System.out.println("Error cerrando conexión: " + e.getMessage());
             }
         }
     }
 
-    private void procesarEnvioArchivo(DataInputStream entrada, DataOutputStream salida) throws IOException {
-        // Recibir nombre de archivo
-        String nombreArchivo = entrada.readUTF();
-        System.out.println("Recibiendo archivo: " + nombreArchivo);
+    private void manejarListarHoteles(DataOutputStream salida) throws IOException {
+        try {
+            List<Hotel> hotelesReales = HotelesData.listar();
 
-        // Confirmar al cliente que estamos listos para recibir
-        salida.writeUTF("OK");
+            // Convertir a DTOs
+            List<HotelDTO> hoteles = new ArrayList<>();
+            for (Hotel hotel : hotelesReales) {
+                hoteles.add(new HotelDTO(hotel.getCodigoHotel(), hotel.getNombre(), hotel.getUbicacion()));
+            }
 
-        // Guardar el archivo recibido
-        File archivo = new File(CARPETA_ARCHIVOS + File.separator + nombreArchivo);
-        FileOutputStream fos = new FileOutputStream(archivo);
-        byte[] buffer = new byte[4096];
-        int leido;
+            JSONObject respuesta = new JSONObject();
+            respuesta.put("estado", "OK");
+            respuesta.put("mensaje", "Hoteles listados correctamente");
 
-        while ((leido = entrada.read(buffer)) > 0) {
-            fos.write(buffer, 0, leido);
+            JSONArray hotelesJson = new JSONArray();
+            for (HotelDTO hotel : hoteles) {
+                hotelesJson.put(JsonUtil.hotelToJson(hotel));
+            }
+            respuesta.put("hoteles", hotelesJson);
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al listar hoteles: " + e.getMessage());
         }
-
-        fos.close();
-        System.out.println("Archivo recibido: " + nombreArchivo);
-
-        // Enviar respuesta de éxito
-        RespuestaDTO<String> respuesta = new RespuestaDTO<>("OK", "Archivo recibido correctamente", nombreArchivo);
-        salida.writeUTF(new JSONObject(respuesta).toString());
     }
 
-    private void enviarListaHoteles(DataOutputStream salida) throws IOException {
-        // Crear lista de hoteles de ejemplo
-        List<HotelDTO> hoteles = new ArrayList<>();
+    private void manejarGuardarHotel(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String hotelJson = entrada.readUTF();
+            JSONObject jsonHotel = new JSONObject(hotelJson);
+            HotelDTO hotelDTO = JsonUtil.jsonToHotel(jsonHotel);
 
-        // Agregar algunos hoteles de ejemplo
-        hoteles.add(new HotelDTO("H001", "Hotel Paraíso", "Playa del Carmen"));
-        hoteles.add(new HotelDTO("H002", "Gran Hotel", "Ciudad de México"));
-        hoteles.add(new HotelDTO("H003", "Hotel Boutique", "San Miguel de Allende"));
+            String codigoGenerado = HotelesData.guardar(hotelDTO.getNombre(), hotelDTO.getUbicacion());
 
-        // Crear respuesta con la lista de hoteles
-        RespuestaDTO<List<HotelDTO>> respuesta = new RespuestaDTO<>("OK", "Lista de hoteles obtenida", hoteles);
+            if ("duplicado".equals(codigoGenerado)) {
+                JSONObject respuesta = new JSONObject();
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Hotel duplicado: ya existe un hotel con ese nombre y ubicación");
+                salida.writeUTF(respuesta.toString());
+                return;
+            }
 
-        // Convertir a JSON y enviar
-        JSONObject jsonRespuesta = new JSONObject();
-        jsonRespuesta.put("estado", respuesta.getEstado());
-        jsonRespuesta.put("mensaje", respuesta.getMensaje());
-        jsonRespuesta.put("hoteles", JsonUtil.hotelesToJson(hoteles));
+            Hotel hotelGuardado = HotelesData.buscar(codigoGenerado);
 
-        salida.writeUTF(jsonRespuesta.toString());
-    }
+            if (hotelGuardado != null) {
+                JSONObject respuesta = new JSONObject();
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Hotel guardado correctamente");
 
-    private void enviarListaHabitaciones(DataOutputStream salida) throws IOException {
-        // Crear lista de habitaciones de ejemplo
-        List<HabitacionDTO> habitaciones = new ArrayList<>();
+                HotelDTO hotelGuardadoDTO = new HotelDTO(
+                        hotelGuardado.getCodigoHotel(),
+                        hotelGuardado.getNombre(),
+                        hotelGuardado.getUbicacion()
+                );
+                respuesta.put("hotel", JsonUtil.hotelToJson(hotelGuardadoDTO));
+                salida.writeUTF(respuesta.toString());
+            } else {
+                enviarError(salida, "Error: No se pudo recuperar el hotel guardado");
+            }
 
-        // Agregar habitaciones de ejemplo
-        habitaciones.add(new HabitacionDTO("HAB001", "Suite", 1500.0));
-        habitaciones.add(new HabitacionDTO("HAB002", "Doble", 800.0));
-        habitaciones.add(new HabitacionDTO("HAB003", "Individual", 500.0));
-
-        // Crear respuesta con la lista de habitaciones
-        RespuestaDTO<List<HabitacionDTO>> respuesta = new RespuestaDTO<>("OK", "Lista de habitaciones obtenida", habitaciones);
-
-        // Convertir a JSON y enviar
-        JSONObject jsonRespuesta = new JSONObject();
-        jsonRespuesta.put("estado", respuesta.getEstado());
-        jsonRespuesta.put("mensaje", respuesta.getMensaje());
-        jsonRespuesta.put("habitaciones", JsonUtil.habitacionesToJson(habitaciones));
-
-        salida.writeUTF(jsonRespuesta.toString());
-    }
-
-    private void procesarGuardarHotel(DataInputStream entrada, DataOutputStream salida) throws IOException {
-        // Leer datos del hotel
-        String datoHotel = entrada.readUTF();
-        JSONObject jsonHotel = new JSONObject(datoHotel);
-
-        // Convertir a DTO
-        HotelDTO hotel = JsonUtil.jsonToHotel(jsonHotel);
-
-        // En una implementación real, aquí guardaríamos en base de datos
-        System.out.println("Guardando hotel: " + hotel.toString());
-
-        // Generar código si no existe
-        if (hotel.getCodigo() == null || hotel.getCodigo().isEmpty()) {
-            hotel.setCodigo("H" + System.currentTimeMillis() % 10000);
+        } catch (Exception e) {
+            enviarError(salida, "Error al guardar hotel: " + e.getMessage());
         }
-
-        // Crear respuesta de éxito
-        RespuestaDTO<HotelDTO> respuesta = new RespuestaDTO<>("OK",
-                "Hotel guardado con código " + hotel.getCodigo(), hotel);
-
-        // Convertir a JSON y enviar
-        JSONObject jsonRespuesta = new JSONObject();
-        jsonRespuesta.put("estado", respuesta.getEstado());
-        jsonRespuesta.put("mensaje", respuesta.getMensaje());
-        jsonRespuesta.put("hotel", JsonUtil.hotelToJson(hotel));
-
-        salida.writeUTF(jsonRespuesta.toString());
     }
 
-    private void procesarEliminarHotel(DataInputStream entrada, DataOutputStream salida) throws IOException {
-        // Leer código del hotel a eliminar
-        String codigoHotel = entrada.readUTF();
+    private void manejarEliminarHotel(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String codigo = entrada.readUTF();
 
-        // En una implementación real, eliminaríamos de la base de datos
-        System.out.println("Eliminando hotel con código: " + codigoHotel);
+            boolean eliminado = HotelesData.eliminar(codigo);
 
-        // Crear respuesta de éxito
-        RespuestaDTO<String> respuesta = new RespuestaDTO<>("OK",
-                "Hotel eliminado correctamente", codigoHotel);
+            JSONObject respuesta = new JSONObject();
+            if (eliminado) {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Hotel eliminado correctamente");
+            } else {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Hotel no encontrado");
+            }
 
-        // Convertir a JSON y enviar
-        JSONObject jsonRespuesta = new JSONObject();
-        jsonRespuesta.put("estado", respuesta.getEstado());
-        jsonRespuesta.put("mensaje", respuesta.getMensaje());
-        jsonRespuesta.put("codigo", respuesta.getDatos());
+            salida.writeUTF(respuesta.toString());
 
-        salida.writeUTF(jsonRespuesta.toString());
+        } catch (Exception e) {
+            enviarError(salida, "Error al eliminar hotel: " + e.getMessage());
+        }
+    }
+
+    private void manejarListarHabitaciones(DataOutputStream salida) throws IOException {
+        try {
+            // ✅ USAR DATOS REALES EN LUGAR DE FALSOS
+            List<Habitacion> habitacionesReales = HabitacionesData.listar();
+
+            // Convertir a DTOs
+            List<HabitacionDTO> habitaciones = new ArrayList<>();
+            for (Habitacion habitacion : habitacionesReales) {
+                habitaciones.add(new HabitacionDTO(
+                        habitacion.getCodigo(),
+                        habitacion.getEstilo(),
+                        habitacion.getPrecio(),
+                        habitacion.getCodigoHotel() // ✅ INCLUIR CÓDIGO DE HOTEL
+                ));
+            }
+
+            JSONObject respuesta = new JSONObject();
+            respuesta.put("estado", "OK");
+            respuesta.put("mensaje", "Habitaciones listadas correctamente");
+
+            JSONArray habitacionesJson = new JSONArray();
+            for (HabitacionDTO habitacion : habitaciones) {
+                JSONObject habJson = new JSONObject();
+                habJson.put("codigo", habitacion.getCodigo());
+                habJson.put("estilo", habitacion.getEstilo());
+                habJson.put("precio", habitacion.getPrecio());
+                habJson.put("codigoHotel", habitacion.getCodigoHotel()); // ✅ INCLUIR
+                habitacionesJson.put(habJson);
+            }
+            respuesta.put("habitaciones", habitacionesJson);
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al listar habitaciones: " + e.getMessage());
+        }
+    }
+
+    private void manejarEnviarArchivo(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String nombreArchivo = entrada.readUTF();
+            salida.writeUTF("OK");
+
+            String rutaDestino = "archivos_recibidos/" + nombreArchivo;
+            try (FileOutputStream fos = new FileOutputStream(rutaDestino)) {
+                byte[] buffer = new byte[4096];
+                int leido;
+                while ((leido = entrada.read(buffer)) > 0) {
+                    fos.write(buffer, 0, leido);
+                }
+            }
+
+            JSONObject respuesta = new JSONObject();
+            respuesta.put("estado", "OK");
+            respuesta.put("mensaje", "Archivo recibido: " + nombreArchivo);
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al recibir archivo: " + e.getMessage());
+        }
+    }
+
+    private void enviarError(DataOutputStream salida, String mensaje) throws IOException {
+        JSONObject respuesta = new JSONObject();
+        respuesta.put("estado", "ERROR");
+        respuesta.put("mensaje", mensaje);
+        salida.writeUTF(respuesta.toString());
     }
 }

@@ -14,7 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class EchoCliente {
-    private static final String HOST = "192.168.1.34"; // o la IP del servidor
+    private static final String HOST = "10.59.18.141"; // o la IP del servidor
     private static final int PUERTO = 5001; // mismo puerto que ActivarServidor
 
     public static void main(String[] args) {

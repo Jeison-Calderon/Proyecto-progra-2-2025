@@ -1,50 +1,43 @@
 package aplicacion.dto;
 
-import java.io.Serializable;
-
-/**
- * Clase DTO que representa los datos de una Habitación
- */
-public class HabitacionDTO implements Serializable {
+public class HabitacionDTO {
     private String codigo;
     private String estilo;
     private double precio;
+    private String codigoHotel;
 
     // Constructor vacío
-    public HabitacionDTO() {
+    public HabitacionDTO() {}
+
+    // Constructor
+    public HabitacionDTO(String codigo, String estilo, double precio, String codigoHotel) {
+        this.codigo = codigo;
+        this.estilo = estilo;
+        this.precio = precio;
+        this.codigoHotel = codigoHotel;
     }
 
-    // Constructor con parámetros
+    // Constructor para compatibilidad
     public HabitacionDTO(String codigo, String estilo, double precio) {
         this.codigo = codigo;
         this.estilo = estilo;
         this.precio = precio;
+        this.codigoHotel = "";
     }
 
-    // Getters y setters
-    public String getCodigo() {
-        return codigo;
-    }
+    // Getters y Setters
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
 
-    public void setCodigo(String codigo) {
-        this.codigo = codigo;
-    }
+    public String getEstilo() { return estilo; }
+    public void setEstilo(String estilo) { this.estilo = estilo; }
 
-    public String getEstilo() {
-        return estilo;
-    }
+    public double getPrecio() { return precio; }
+    public void setPrecio(double precio) { this.precio = precio; }
 
-    public void setEstilo(String estilo) {
-        this.estilo = estilo;
-    }
 
-    public double getPrecio() {
-        return precio;
-    }
-
-    public void setPrecio(double precio) {
-        this.precio = precio;
-    }
+    public String getCodigoHotel() { return codigoHotel; }
+    public void setCodigoHotel(String codigoHotel) { this.codigoHotel = codigoHotel; }
 
     @Override
     public String toString() {
@@ -52,6 +45,7 @@ public class HabitacionDTO implements Serializable {
                 "codigo='" + codigo + '\'' +
                 ", estilo='" + estilo + '\'' +
                 ", precio=" + precio +
+                ", codigoHotel='" + codigoHotel + '\'' +
                 '}';
     }
 }

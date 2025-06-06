@@ -97,4 +97,24 @@ public class ServicioHoteles {
 
         return true;
     }
+
+    /**
+     * Obtiene el nombre de un hotel por su código
+     */
+    public String obtenerNombreHotel(String codigoHotel) throws IOException {
+        try {
+            List<HotelDTO> hoteles = listarHoteles();
+
+            for (HotelDTO hotel : hoteles) {
+                if (hotel.getCodigo().equals(codigoHotel)) {
+                    return hotel.getNombre();
+                }
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            throw new IOException("Error obteniendo nombre del hotel: " + e.getMessage(), e);
+        }
+    }
 }

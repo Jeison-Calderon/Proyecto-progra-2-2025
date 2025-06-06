@@ -8,6 +8,7 @@ import aplicacion.util.TabManager;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.util.Optional;
@@ -23,6 +24,10 @@ public class MenuPrincipal {
     private GestorHabitaciones gestorHabitaciones;
     private NotificacionManager notificacionManager;
     private TabManager tabManager;
+
+    // ✅ NUEVAS CLASES DE RESERVAS (JavaFX)
+    private ConsultaDisponibilidad consultaDisponibilidad;
+    private GestionReservas gestionReservas;
 
     // ✅ COMPONENTES UI PRINCIPALES
     private TextArea txtResultado;
@@ -48,6 +53,10 @@ public class MenuPrincipal {
         gestorHoteles = new GestorHoteles(servicioHoteles, notificacionManager, tabManager);
         gestorHabitaciones = new GestorHabitaciones(servicioHabitaciones, notificacionManager, tabManager);
 
+        // ✅ INICIALIZAR NUEVAS CLASES DE RESERVAS
+        consultaDisponibilidad = new ConsultaDisponibilidad();
+        gestionReservas = new GestionReservas();
+
         // ✅ CONFIGURAR CALLBACK: Cuando se hace clic en "Habitaciones"
         gestorHoteles.setOnVerHabitaciones(this::verHabitacionesHotel);
     }
@@ -65,15 +74,12 @@ public class MenuPrincipal {
         gestorHabitaciones = new GestorHabitaciones(servicioHabitaciones, notificacionManager, tabManager);
         gestorHoteles.setOnVerHabitaciones(this::verHabitacionesHotel);
 
-        // ✅ CREAR PESTAÑA PRINCIPAL DE HOTELES
-        Tab tabHoteles = new Tab("Gestión de Hoteles");
-        tabHoteles.setClosable(false);
-        tabHoteles.setContent(gestorHoteles.crearVista());
+        // ✅ CREAR PESTAÑAS PRINCIPALES
+        crearPestanasPrincipales();
 
-        tabPane.getTabs().add(tabHoteles);
         root.setCenter(tabPane);
 
-        // ✅ CREAR HEADER CON BOTÓN SALIR
+        // ✅ CREAR HEADER CON TÍTULO Y BOTONES
         BorderPane header = crearHeader();
         root.setTop(header);
 
@@ -83,14 +89,44 @@ public class MenuPrincipal {
         return root;
     }
 
-    // ✅ CREAR HEADER CON TÍTULO Y BOTÓN SALIR
+    // ✅ CREAR PESTAÑAS PRINCIPALES DEL SISTEMA
+    private void crearPestanasPrincipales() {
+        // 🏨 PESTAÑA GESTIÓN DE HOTELES
+        Tab tabHoteles = new Tab("Gestión de Hoteles");
+        tabHoteles.setClosable(false);
+        tabHoteles.setContent(gestorHoteles.crearVista());
+
+        // 🔍 PESTAÑA CONSULTA DE DISPONIBILIDAD
+        Tab tabConsulta = new Tab("Consulta Disponibilidad");
+        tabConsulta.setClosable(false);
+        tabConsulta.setContent(consultaDisponibilidad.getVista());
+
+        // 📋 PESTAÑA GESTIÓN DE RESERVAS
+        Tab tabReservas = new Tab("Gestión de Reservas");
+        tabReservas.setClosable(false);
+        tabReservas.setContent(gestionReservas.getVista());
+
+        // ✅ AGREGAR PESTAÑAS AL TabPane
+        tabPane.getTabs().addAll(tabHoteles, tabConsulta, tabReservas);
+
+        // ✅ SELECCIONAR PRIMERA PESTAÑA POR DEFECTO
+        tabPane.getSelectionModel().selectFirst();
+    }
+
+    // ✅ CREAR HEADER CON TÍTULO Y BOTONES DE NAVEGACIÓN
     private BorderPane crearHeader() {
         BorderPane header = new BorderPane();
 
+        // ✅ TÍTULO PRINCIPAL
         Label lblHeader = new Label("Sistema de Gestión de Hoteles - Cliente");
         lblHeader.setStyle("-fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: bold;");
         header.setCenter(lblHeader);
 
+        // ✅ BOTONES DE NAVEGACIÓN RÁPIDA (IZQUIERDA) - SIN EMOJIS
+        HBox botonesNavegacion = crearBotonesNavegacion();
+        header.setLeft(botonesNavegacion);
+
+        // ✅ BOTÓN SALIR (DERECHA) - SIN EMOJI
         Button btnSalir = crearBotonSalir();
         header.setRight(btnSalir);
 
@@ -100,7 +136,53 @@ public class MenuPrincipal {
         return header;
     }
 
-    // ✅ CREAR BOTÓN SALIR CON ESTILOS Y EVENTOS
+    // ✅ CREAR BOTONES DE NAVEGACIÓN RÁPIDA - SIN EMOJIS
+    private HBox crearBotonesNavegacion() {
+        HBox contenedor = new HBox(5);
+        contenedor.setStyle("-fx-alignment: center-left;");
+
+        // Botón Hoteles - ÍNDICE 0
+        Button btnHoteles = new Button("Hoteles");
+        btnHoteles.setStyle(estiloBotonNavegacion());
+        btnHoteles.setOnAction(e -> {
+            System.out.println("Navegando a Hoteles - Índice 0");
+            tabPane.getSelectionModel().select(0);
+        });
+
+        // Botón Disponibilidad - ÍNDICE 1
+        Button btnDisponibilidad = new Button("Disponibilidad");
+        btnDisponibilidad.setStyle(estiloBotonNavegacion());
+        btnDisponibilidad.setOnAction(e -> {
+            System.out.println("Navegando a Disponibilidad - Índice 1");
+            tabPane.getSelectionModel().select(1);
+        });
+
+        // Botón Reservas - ÍNDICE 2
+        Button btnReservas = new Button("Reservas");
+        btnReservas.setStyle(estiloBotonNavegacion());
+        btnReservas.setOnAction(e -> {
+            System.out.println("Navegando a Reservas - Índice 2");
+            tabPane.getSelectionModel().select(2);
+        });
+
+        contenedor.getChildren().addAll(btnHoteles, btnDisponibilidad, btnReservas);
+
+        return contenedor;
+    }
+
+    // ✅ ESTILO PARA BOTONES DE NAVEGACIÓN
+    private String estiloBotonNavegacion() {
+        return "-fx-background-color: #495057; " +
+                "-fx-text-fill: white; " +
+                "-fx-font-weight: bold; " +
+                "-fx-padding: 5 10; " +
+                "-fx-border-radius: 3; " +
+                "-fx-background-radius: 3; " +
+                "-fx-cursor: hand; " +
+                "-fx-font-size: 12px;";
+    }
+
+    // ✅ CREAR BOTÓN SALIR SIN EMOJI
     private Button crearBotonSalir() {
         Button btnSalir = new Button("Salir");
 
@@ -141,7 +223,7 @@ public class MenuPrincipal {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar Salida");
         alert.setHeaderText("¿Está seguro que desea salir de la aplicación?");
-        alert.setContentText("Se cerrarán todas las ventanas abiertas.");
+        alert.setContentText("Se cerrarán todas las ventanas abiertas y la conexión al servidor.");
 
         ButtonType btnSalir = new ButtonType("Salir", ButtonBar.ButtonData.OK_DONE);
         ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -153,5 +235,42 @@ public class MenuPrincipal {
         if (result.isPresent() && result.get() == btnSalir) {
             System.exit(0);
         }
+    }
+
+    // ✅ MÉTODOS PÚBLICOS PARA NAVEGACIÓN EXTERNA
+
+    /**
+     * Navegar directamente a la pestaña de consulta de disponibilidad
+     */
+    public void irAConsultaDisponibilidad() {
+        tabPane.getSelectionModel().select(1);
+    }
+
+    /**
+     * Navegar directamente a la pestaña de gestión de reservas
+     */
+    public void irAGestionReservas() {
+        tabPane.getSelectionModel().select(2);
+    }
+
+    /**
+     * Navegar directamente a la pestaña de gestión de hoteles
+     */
+    public void irAGestionHoteles() {
+        tabPane.getSelectionModel().select(0);
+    }
+
+    /**
+     * Obtener referencia a la consulta de disponibilidad
+     */
+    public ConsultaDisponibilidad getConsultaDisponibilidad() {
+        return consultaDisponibilidad;
+    }
+
+    /**
+     * Obtener referencia a la gestión de reservas
+     */
+    public GestionReservas getGestionReservas() {
+        return gestionReservas;
     }
 }

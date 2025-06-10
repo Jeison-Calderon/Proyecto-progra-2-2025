@@ -3,6 +3,7 @@ import aplicacion.grafica.GestorHoteles;
 import aplicacion.servicio.ServicioHoteles;
 import aplicacion.util.NotificacionManager;
 import aplicacion.util.TabManager;
+import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TabPane;
@@ -22,7 +23,11 @@ public class GestorHotelesTest {
 
     @BeforeAll
     public static void initToolkit() {
-        new JFXPanel();  // Esto inicializa el toolkit JavaFX
+        try {
+            Platform.startup(() -> {}); // ✅ reemplaza a new JFXPanel()
+        } catch (IllegalStateException e) {
+            // JavaFX ya fue inicializado, no hacer nada
+        }
     }
 
     @BeforeEach

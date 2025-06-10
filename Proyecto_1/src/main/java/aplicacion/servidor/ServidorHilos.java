@@ -110,34 +110,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    private void manejarLogin(DataInputStream entrada, DataOutputStream salida) throws IOException {
-        try {
-            String loginJson = entrada.readUTF();
-            JSONObject datos = new JSONObject(loginJson);
-
-            String usuario = datos.getString("usuario");
-            String contrasena = datos.getString("contrasena");
-
-            Usuario usuarioEncontrado = UsuarioDAO.buscarPorCredenciales(usuario, contrasena);
-
-            JSONObject respuesta = new JSONObject();
-            if (usuarioEncontrado != null) {
-                respuesta.put("estado", "OK");
-                respuesta.put("mensaje", "Login exitoso");
-                System.out.println("✅ " + LocalDateTime.now() + " - Usuario autenticado: " + usuario);
-            } else {
-                respuesta.put("estado", "ERROR");
-                respuesta.put("mensaje", "Usuario o contraseña incorrectos");
-                System.out.println("❌ " + LocalDateTime.now() + " - Intento de login fallido para usuario: " + usuario);
-            }
-
-            salida.writeUTF(respuesta.toString());
-
-        } catch (Exception e) {
-            enviarError(salida, "Error en el login: " + e.getMessage());
-        }
-    }
-
     private void manejarRegistroUsuario(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String datosJson = entrada.readUTF();
@@ -146,6 +118,7 @@ public class ServidorHilos extends Thread {
             String usuario = datos.getString("usuario");
             String contrasena = datos.getString("contrasena");
             String confirmarContrasena = datos.getString("confirmarContrasena");
+            String tipoStr = datos.getString("tipo");
 
             // Validaciones
             if (usuario.isEmpty() || contrasena.isEmpty()) {
@@ -158,13 +131,12 @@ public class ServidorHilos extends Thread {
                 return;
             }
 
-            if (usuario.length() < 4) {
-                enviarError(salida, "El nombre de usuario debe tener al menos 4 caracteres");
-                return;
-            }
-
-            if (contrasena.length() < 6) {
-                enviarError(salida, "La contraseña debe tener al menos 6 caracteres");
+            // Convertir el tipo de usuario
+            Usuario.TipoUsuario tipo;
+            try {
+                tipo = Usuario.TipoUsuario.valueOf(tipoStr);
+            } catch (IllegalArgumentException e) {
+                enviarError(salida, "Tipo de usuario inválido");
                 return;
             }
 
@@ -179,7 +151,7 @@ public class ServidorHilos extends Thread {
             }
 
             // Crear y guardar nuevo usuario
-            Usuario nuevoUsuario = new Usuario(usuario, contrasena);
+            Usuario nuevoUsuario = new Usuario(usuario, contrasena, tipo);
             usuarios.add(nuevoUsuario);
             UsuarioDAO.guardarUsuarios(usuarios);
 
@@ -188,10 +160,37 @@ public class ServidorHilos extends Thread {
             respuesta.put("mensaje", "Usuario registrado correctamente");
             salida.writeUTF(respuesta.toString());
 
-            System.out.println("✅ " + LocalDateTime.now() + " - Nuevo usuario registrado: " + usuario);
-
         } catch (Exception e) {
             enviarError(salida, "Error al registrar usuario: " + e.getMessage());
+        }
+    }
+
+    private void manejarLogin(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String loginJson = entrada.readUTF();
+            JSONObject datos = new JSONObject(loginJson);
+
+            String usuario = datos.getString("usuario");
+            String contrasena = datos.getString("contrasena");
+            String tipoStr = datos.getString("tipo");
+
+            Usuario usuarioEncontrado = UsuarioDAO.buscarPorCredenciales(usuario, contrasena);
+
+            JSONObject respuesta = new JSONObject();
+            if (usuarioEncontrado != null &&
+                    usuarioEncontrado.getTipo().toString().equals(tipoStr)) {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Login exitoso");
+                respuesta.put("tipo", usuarioEncontrado.getTipo().toString());
+            } else {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Usuario o contraseña incorrectos");
+            }
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error en el login: " + e.getMessage());
         }
     }
 

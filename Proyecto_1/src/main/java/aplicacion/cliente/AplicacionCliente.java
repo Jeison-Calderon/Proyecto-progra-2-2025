@@ -36,10 +36,12 @@ public class AplicacionCliente extends Application {
         }
     }
 
-    private void cargarMenuRecepcionista(Stage stage, String usuario) {
+    public void cargarMenuRecepcionista(Stage stage, String usuario) {
         try {
             BorderPane root = new BorderPane();
             MenuPrincipal menu = new MenuPrincipal();
+            menu.setUsuario(usuario); // Establecer el usuario
+            menu.setStage(stage); // Establecer la referencia al Stage
             BorderPane menuVista = menu.getVista();
 
             root.setCenter(menuVista.getCenter());
@@ -57,10 +59,11 @@ public class AplicacionCliente extends Application {
         }
     }
 
-    private void cargarMenuHuesped(Stage stage, String usuario) {
+    public void cargarMenuHuesped(Stage stage, String usuario) {
         try {
             BorderPane root = new BorderPane();
             MenuHuesped menu = new MenuHuesped(usuario);
+            menu.setStage(stage); // Establecer la referencia al Stage
             BorderPane menuVista = menu.getVista();
 
             // Establecer el contenido del menú de huésped

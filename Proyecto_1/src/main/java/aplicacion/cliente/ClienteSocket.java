@@ -10,6 +10,7 @@ public class ClienteSocket {
 
     public String enviarOperacion(String operacion) throws IOException {
         return enviarOperacion(operacion, null);
+
     }
 
     public String enviarOperacion(String operacion, String datos) throws IOException {

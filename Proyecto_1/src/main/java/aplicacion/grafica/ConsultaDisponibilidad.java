@@ -7,6 +7,8 @@ import aplicacion.servicio.ServicioHabitaciones;
 import aplicacion.servicio.ServicioHoteles;
 import aplicacion.servicio.ServicioReservas;
 import aplicacion.servicio.ServicioReservas.ResultadoOperacion;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -19,6 +21,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -48,8 +51,19 @@ public class ConsultaDisponibilidad {
     private Label lblPrecioPromedio;
     private Label lblRangoPrecios;
 
-    // Vista principal
+    // Vista principal y componentes de carga
     private BorderPane vistaPrincipal;
+    private StackPane contenedorPrincipal;
+    private VBox panelCarga;
+    private Label tituloResultados;
+
+    // ✅ NUEVO: Variables para las columnas (necesarias para el ordenamiento)
+    private TableColumn<DisponibilidadDTO, String> colHotel;
+    private TableColumn<DisponibilidadDTO, String> colHabitacion;
+    private TableColumn<DisponibilidadDTO, String> colEstilo;
+    private TableColumn<DisponibilidadDTO, Double> colPrecio;
+    private TableColumn<DisponibilidadDTO, Integer> colImagenes;
+    private TableColumn<DisponibilidadDTO, String> colEstado;
 
     public ConsultaDisponibilidad() {
         inicializarServicios();
@@ -69,7 +83,10 @@ public class ConsultaDisponibilidad {
     }
 
     private void crearComponentes() {
+        // ✅ CORREGIDO: Contenedor principal con StackPane para overlays
+        contenedorPrincipal = new StackPane();
         vistaPrincipal = new BorderPane();
+        contenedorPrincipal.getChildren().add(vistaPrincipal);
 
         // Panel superior - Filtros
         VBox panelFiltros = crearPanelFiltros();
@@ -177,28 +194,63 @@ public class ConsultaDisponibilidad {
         VBox contenedor = new VBox(10);
         contenedor.setPadding(new Insets(15));
 
-        Label titulo = new Label("Habitaciones Disponibles");
-        titulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
+        // Título con contador de resultados
+        tituloResultados = new Label("Habitaciones Disponibles");
+        tituloResultados.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
 
         // Crear tabla
         tablaDisponibilidad = new TableView<>();
         datosTabla = FXCollections.observableArrayList();
         tablaDisponibilidad.setItems(datosTabla);
 
-        // Configurar columnas
-        TableColumn<DisponibilidadDTO, String> colHotel = new TableColumn<>("Hotel");
+        // Configurar placeholder para tabla vacía
+        configurarTablaVacia();
+
+        // ✅ CORREGIDO: Crear columnas como variables de instancia
+        crearColumnas();
+
+        // Agregar todas las columnas incluyendo la nueva de Estado
+        tablaDisponibilidad.getColumns().addAll(colHotel, colHabitacion, colEstilo, colPrecio, colImagenes, colEstado, crearColumnaAcciones());
+
+        // ✅ CORREGIDO: Habilitar ordenamiento de columnas
+        habilitarOrdenamientoColumnas();
+
+        // Configurar tabla
+        tablaDisponibilidad.setRowFactory(tv -> {
+            TableRow<DisponibilidadDTO> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    abrirDialogoReserva(row.getItem());
+                }
+            });
+            return row;
+        });
+
+        contenedor.getChildren().addAll(tituloResultados, tablaDisponibilidad);
+        VBox.setVgrow(tablaDisponibilidad, Priority.ALWAYS);
+
+        return contenedor;
+    }
+
+    // ✅ NUEVO: Método separado para crear columnas
+    private void crearColumnas() {
+        // Columna Hotel
+        colHotel = new TableColumn<>("Hotel");
         colHotel.setCellValueFactory(new PropertyValueFactory<>("nombreHotel"));
         colHotel.setPrefWidth(120);
 
-        TableColumn<DisponibilidadDTO, String> colHabitacion = new TableColumn<>("Habitación");
+        // Columna Habitación
+        colHabitacion = new TableColumn<>("Habitación");
         colHabitacion.setCellValueFactory(new PropertyValueFactory<>("numeroHabitacion"));
         colHabitacion.setPrefWidth(100);
 
-        TableColumn<DisponibilidadDTO, String> colEstilo = new TableColumn<>("Estilo");
+        // Columna Estilo
+        colEstilo = new TableColumn<>("Estilo");
         colEstilo.setCellValueFactory(new PropertyValueFactory<>("estilo"));
         colEstilo.setPrefWidth(120);
 
-        TableColumn<DisponibilidadDTO, Double> colPrecio = new TableColumn<>("Precio/Noche");
+        // Columna Precio
+        colPrecio = new TableColumn<>("Precio/Noche");
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
         colPrecio.setPrefWidth(120);
         colPrecio.setCellFactory(column -> new TableCell<DisponibilidadDTO, Double>() {
@@ -213,12 +265,52 @@ public class ConsultaDisponibilidad {
             }
         });
 
-        TableColumn<DisponibilidadDTO, Integer> colImagenes = new TableColumn<>("Imágenes");
+        // Columna Imágenes
+        colImagenes = new TableColumn<>("Imágenes");
         colImagenes.setCellValueFactory(new PropertyValueFactory<>("cantidadImagenes"));
         colImagenes.setPrefWidth(80);
 
+        // Columna Estado
+        colEstado = new TableColumn<>("Estado");
+        colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
+        colEstado.setPrefWidth(120);
+        colEstado.setCellFactory(column -> new TableCell<DisponibilidadDTO, String>() {
+            @Override
+            protected void updateItem(String estado, boolean empty) {
+                super.updateItem(estado, empty);
+                if (empty || estado == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(estado);
+                    // Aplicar estilos según el estado
+                    switch (estado.toUpperCase()) {
+                        case "DISPONIBLE":
+                            setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-font-weight: bold; -fx-padding: 3 8; -fx-border-radius: 3;");
+                            break;
+                        case "MANTENIMIENTO":
+                            setStyle("-fx-background-color: #fff3cd; -fx-text-fill: #856404; -fx-font-weight: bold; -fx-padding: 3 8; -fx-border-radius: 3;");
+                            break;
+                        case "OCUPADA":
+                            setStyle("-fx-background-color: #f8d7da; -fx-text-fill: #721c24; -fx-font-weight: bold; -fx-padding: 3 8; -fx-border-radius: 3;");
+                            break;
+                        case "FUERA_DE_SERVICIO":
+                            setStyle("-fx-background-color: #e2e3e5; -fx-text-fill: #383d41; -fx-font-weight: bold; -fx-padding: 3 8; -fx-border-radius: 3;");
+                            break;
+                        default:
+                            setStyle("-fx-font-weight: bold; -fx-padding: 3 8;");
+                    }
+                }
+            }
+        });
+    }
+
+    // ✅ NUEVO: Método separado para crear columna de acciones
+    private TableColumn<DisponibilidadDTO, Void> crearColumnaAcciones() {
         TableColumn<DisponibilidadDTO, Void> colAcciones = new TableColumn<>("Acciones");
         colAcciones.setPrefWidth(120);
+        colAcciones.setSortable(false); // Las acciones no se pueden ordenar
+
         colAcciones.setCellFactory(column -> new TableCell<DisponibilidadDTO, Void>() {
             private final Button btnReservar = new Button("Reservar");
 
@@ -241,23 +333,91 @@ public class ConsultaDisponibilidad {
             }
         });
 
-        tablaDisponibilidad.getColumns().addAll(colHotel, colHabitacion, colEstilo, colPrecio, colImagenes, colAcciones);
+        return colAcciones;
+    }
 
-        // Configurar tabla
-        tablaDisponibilidad.setRowFactory(tv -> {
-            TableRow<DisponibilidadDTO> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    abrirDialogoReserva(row.getItem());
-                }
-            });
-            return row;
-        });
+    // ✅ CORREGIDO: Habilitar ordenamiento sin parámetros problemáticos
+    private void habilitarOrdenamientoColumnas() {
+        // Habilitar ordenamiento para columnas apropiadas
+        colHotel.setSortable(true);
+        colHabitacion.setSortable(true);
+        colEstilo.setSortable(true);
+        colPrecio.setSortable(true);
+        colImagenes.setSortable(true);
+        colEstado.setSortable(true);
 
-        contenedor.getChildren().addAll(titulo, tablaDisponibilidad);
-        VBox.setVgrow(tablaDisponibilidad, Priority.ALWAYS);
+        // Configurar comparadores personalizados
+        colPrecio.setComparator(Double::compare);
+        colImagenes.setComparator(Integer::compare);
 
-        return contenedor;
+        // Configurar ordenamiento inicial por precio (menor a mayor)
+        tablaDisponibilidad.getSortOrder().add(colPrecio);
+        colPrecio.setSortType(TableColumn.SortType.ASCENDING);
+
+        // ✅ ELIMINADO: setSortPolicy problemático - JavaFX maneja esto automáticamente
+        // tablaDisponibilidad.setSortPolicy(TableView.DEFAULT_SORT_POLICY);
+    }
+
+    // Configurar placeholder para tabla vacía
+    private void configurarTablaVacia() {
+        VBox placeholderVacio = new VBox(20);
+        placeholderVacio.setAlignment(Pos.CENTER);
+        placeholderVacio.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 40;");
+
+        Label iconoVacio = new Label("🔍");
+        iconoVacio.setStyle("-fx-font-size: 48px;");
+
+        Label tituloVacio = new Label("No se encontraron habitaciones disponibles");
+        tituloVacio.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #6c757d;");
+
+        Label mensajeVacio = new Label("Prueba ajustando los filtros de búsqueda o selecciona otras fechas");
+        mensajeVacio.setStyle("-fx-font-size: 12px; -fx-text-fill: #868e96; -fx-text-alignment: center; -fx-wrap-text: true;");
+        mensajeVacio.setMaxWidth(300);
+
+        Button btnNuevaBusqueda = new Button("🔄 Nueva Búsqueda");
+        btnNuevaBusqueda.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-border-radius: 5; -fx-background-radius: 5;");
+        btnNuevaBusqueda.setOnAction(e -> limpiarFiltros());
+
+        placeholderVacio.getChildren().addAll(iconoVacio, tituloVacio, mensajeVacio, btnNuevaBusqueda);
+
+        tablaDisponibilidad.setPlaceholder(placeholderVacio);
+    }
+
+    // Crear indicador de carga
+    private VBox crearIndicadorCarga(String mensaje) {
+        VBox indicador = new VBox(15);
+        indicador.setAlignment(Pos.CENTER);
+        indicador.setStyle("-fx-background-color: rgba(248, 249, 250, 0.95); -fx-padding: 40; -fx-border-radius: 10; -fx-background-radius: 10;");
+        indicador.setMaxWidth(300);
+        indicador.setMaxHeight(200);
+
+        Label iconoCarga = new Label("⏳");
+        iconoCarga.setStyle("-fx-font-size: 32px;");
+
+        ProgressIndicator progreso = new ProgressIndicator();
+        progreso.setPrefSize(50, 50);
+        progreso.setStyle("-fx-accent: #007bff;");
+
+        Label textoCarga = new Label(mensaje);
+        textoCarga.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #007bff; -fx-text-alignment: center;");
+        textoCarga.setWrapText(true);
+
+        indicador.getChildren().addAll(iconoCarga, progreso, textoCarga);
+        return indicador;
+    }
+
+    // Mostrar/ocultar indicador de carga
+    private void mostrarIndicadorCarga(String mensaje) {
+        panelCarga = crearIndicadorCarga(mensaje);
+        contenedorPrincipal.getChildren().add(panelCarga);
+        StackPane.setAlignment(panelCarga, Pos.CENTER);
+    }
+
+    private void ocultarIndicadorCarga() {
+        if (panelCarga != null) {
+            contenedorPrincipal.getChildren().remove(panelCarga);
+            panelCarga = null;
+        }
     }
 
     private HBox crearPanelEstadisticas() {
@@ -337,13 +497,14 @@ public class ConsultaDisponibilidad {
         new Thread(task).start();
     }
 
+    // Consulta con indicadores de carga y notificaciones
     private void consultarDisponibilidad() {
         if (!validarFormulario()) {
             return;
         }
 
-        btnConsultar.setDisable(true);
-        btnConsultar.setText("Consultando...");
+        // Mostrar indicador de carga
+        mostrarIndicadorCarga("Consultando disponibilidad en el servidor...");
 
         Task<List<DisponibilidadDTO>> task = new Task<List<DisponibilidadDTO>>() {
             @Override
@@ -363,23 +524,24 @@ public class ConsultaDisponibilidad {
             @Override
             protected void succeeded() {
                 Platform.runLater(() -> {
+                    ocultarIndicadorCarga();
+
                     List<DisponibilidadDTO> disponibilidad = getValue();
                     List<DisponibilidadDTO> disponibilidadFiltrada = aplicarFiltrosAdicionales(disponibilidad);
 
                     actualizarTabla(disponibilidadFiltrada);
                     actualizarEstadisticas(disponibilidadFiltrada);
 
-                    btnConsultar.setDisable(false);
-                    btnConsultar.setText("Consultar Disponibilidad");
+                    // Mostrar mensaje de éxito
+                    mostrarMensajeExito("Consulta completada: " + disponibilidadFiltrada.size() + " habitaciones encontradas");
                 });
             }
 
             @Override
             protected void failed() {
                 Platform.runLater(() -> {
+                    ocultarIndicadorCarga();
                     mostrarError("Error consultando disponibilidad: " + getException().getMessage());
-                    btnConsultar.setDisable(false);
-                    btnConsultar.setText("Consultar Disponibilidad");
                 });
             }
         };
@@ -418,9 +580,19 @@ public class ConsultaDisponibilidad {
                 estiloSeleccionado.equals(item.getEstilo());
     }
 
+    // Actualizar tabla con contador de resultados
     private void actualizarTabla(List<DisponibilidadDTO> disponibilidad) {
         datosTabla.clear();
         datosTabla.addAll(disponibilidad);
+
+        // Actualizar título con cantidad de resultados
+        if (disponibilidad.isEmpty()) {
+            tituloResultados.setText("Habitaciones Disponibles - Sin resultados");
+            tituloResultados.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #dc3545;");
+        } else {
+            tituloResultados.setText("Habitaciones Disponibles (" + disponibilidad.size() + " encontradas)");
+            tituloResultados.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #28a745;");
+        }
     }
 
     private void actualizarEstadisticas(List<DisponibilidadDTO> disponibilidad) {
@@ -432,6 +604,36 @@ public class ConsultaDisponibilidad {
         lblTotalHabitaciones.setText("Total: " + total + " habitaciones");
         lblPrecioPromedio.setText(String.format("Precio promedio: $%.2f", promedio));
         lblRangoPrecios.setText(String.format("Rango: $%.2f - $%.2f", min, max));
+    }
+
+    // Sistema de notificaciones mejorado
+    private void mostrarMensajeExito(String mensaje) {
+        Label notificacion = new Label("✅ " + mensaje);
+        notificacion.setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724; " +
+                "-fx-padding: 10 15; -fx-font-weight: bold; -fx-border-color: #c3e6cb; " +
+                "-fx-border-radius: 5; -fx-background-radius: 5;");
+
+        mostrarNotificacionTemporal(notificacion);
+    }
+
+    private void mostrarMensajeInfo(String mensaje) {
+        Label notificacion = new Label("ℹ️ " + mensaje);
+        notificacion.setStyle("-fx-background-color: #d1ecf1; -fx-text-fill: #0c5460; " +
+                "-fx-padding: 10 15; -fx-font-weight: bold; -fx-border-color: #bee5eb; " +
+                "-fx-border-radius: 5; -fx-background-radius: 5;");
+
+        mostrarNotificacionTemporal(notificacion);
+    }
+
+    private void mostrarNotificacionTemporal(Label notificacion) {
+        VBox contenedorNotificacion = (VBox) vistaPrincipal.getTop();
+        contenedorNotificacion.getChildren().add(0, notificacion);
+
+        // Eliminar notificación después de 3 segundos
+        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(3), e -> {
+            contenedorNotificacion.getChildren().remove(notificacion);
+        }));
+        timeline.play();
     }
 
     private void abrirDialogoReserva(DisponibilidadDTO disponibilidad) {
@@ -485,6 +687,7 @@ public class ConsultaDisponibilidad {
         }
     }
 
+    // Limpiar filtros con mensaje informativo
     private void limpiarFiltros() {
         comboHotel.getSelectionModel().selectFirst();
         dateDesde.setValue(LocalDate.now());
@@ -497,6 +700,12 @@ public class ConsultaDisponibilidad {
         lblTotalHabitaciones.setText("Total: 0 habitaciones");
         lblPrecioPromedio.setText("Precio promedio: $0.00");
         lblRangoPrecios.setText("Rango: $0.00 - $0.00");
+
+        // Resetear título
+        tituloResultados.setText("Habitaciones Disponibles");
+        tituloResultados.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
+
+        mostrarMensajeInfo("Filtros limpiados - Lista para nueva búsqueda");
     }
 
     private void mostrarError(String mensaje) {
@@ -515,8 +724,9 @@ public class ConsultaDisponibilidad {
         alert.showAndWait();
     }
 
-    public BorderPane getVista() {
-        return vistaPrincipal;
+    // Retornar StackPane en lugar de BorderPane
+    public StackPane getVista() {
+        return contenedorPrincipal;
     }
 
     // Clase auxiliar
@@ -573,12 +783,16 @@ public class ConsultaDisponibilidad {
             Label lblHabitacion = new Label("Habitación: " + disponibilidad.getNumeroHabitacion() + " - " + disponibilidad.getEstilo());
             Label lblFechas = new Label("Fechas: " + fechaDesde + " al " + fechaHasta);
 
+            // Mostrar también el estado de la habitación
+            Label lblEstado = new Label("Estado: " + disponibilidad.getEstado());
+            lblEstado.setStyle("-fx-font-weight: bold; -fx-text-fill: #28a745;");
+
             long dias = fechaDesde.until(fechaHasta).getDays();
             double precioTotal = dias * disponibilidad.getPrecio();
             lblPrecioTotal = new Label(String.format("Precio Total: $%.2f (%d noches × $%.2f)", precioTotal, dias, disponibilidad.getPrecio()));
             lblPrecioTotal.setStyle("-fx-font-weight: bold; -fx-text-fill: #28a745;");
 
-            infoHabitacion.getChildren().addAll(lblTitulo, lblHotel, lblHabitacion, lblFechas, lblPrecioTotal);
+            infoHabitacion.getChildren().addAll(lblTitulo, lblHotel, lblHabitacion, lblEstado, lblFechas, lblPrecioTotal);
 
             // Formulario cliente
             VBox formulario = new VBox(10);

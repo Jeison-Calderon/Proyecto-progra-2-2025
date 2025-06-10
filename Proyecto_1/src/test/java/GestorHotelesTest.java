@@ -74,6 +74,7 @@ public class GestorHotelesTest {
         //Assert
         assertEquals(1, gestor.getTabla().getItems().size());
         assertEquals("Hotel Central", gestor.getTabla().getItems().get(0).getNombre());
+
     }
 
     @Test

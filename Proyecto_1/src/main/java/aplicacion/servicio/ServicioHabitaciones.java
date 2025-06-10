@@ -17,9 +17,6 @@ public class ServicioHabitaciones {
         this.cliente = new ClienteSocket();
     }
 
-    /**
-     * Lista todas las habitaciones desde el servidor
-     */
     public List<HabitacionDTO> listarHabitaciones() throws IOException {
         String respuestaJson = cliente.enviarOperacion("LISTAR_HABITACIONES");
         JSONObject respuesta = new JSONObject(respuestaJson);
@@ -39,9 +36,6 @@ public class ServicioHabitaciones {
         return habitaciones;
     }
 
-    /**
-     * Lista habitaciones de un hotel específico
-     */
     public List<HabitacionDTO> listarHabitacionesPorHotel(String codigoHotel) throws IOException {
         List<HabitacionDTO> todas = listarHabitaciones();
         List<HabitacionDTO> filtradas = new ArrayList<>();
@@ -55,11 +49,9 @@ public class ServicioHabitaciones {
         return filtradas;
     }
 
-    /**
-     * Guarda una nueva habitación en el servidor
-     */
     public String guardarHabitacion(String estilo, double precio, String codigoHotel) throws IOException {
-        // Crear JSON para enviar
+
+        //Crear JSON para enviar
         JSONObject habitacionJson = new JSONObject();
         habitacionJson.put("estilo", estilo);
         habitacionJson.put("precio", precio);
@@ -78,9 +70,6 @@ public class ServicioHabitaciones {
         return respuesta.getString("codigo");
     }
 
-    /**
-     * Modifica una habitación existente en el servidor
-     */
     public boolean modificarHabitacion(HabitacionDTO habitacion) throws IOException {
         String habitacionJson = JsonUtil.habitacionToJson(habitacion).toString();
 
@@ -97,9 +86,6 @@ public class ServicioHabitaciones {
         return true;
     }
 
-    /**
-     * Elimina una habitación del servidor
-     */
     public boolean eliminarHabitacion(String codigo) throws IOException {
         String respuestaJson = cliente.enviarOperacion("ELIMINAR_HABITACION", codigo);
         JSONObject respuesta = new JSONObject(respuestaJson);

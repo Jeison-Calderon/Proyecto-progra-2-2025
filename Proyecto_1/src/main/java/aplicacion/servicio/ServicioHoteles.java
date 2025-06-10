@@ -17,9 +17,6 @@ public class ServicioHoteles {
         this.cliente = new ClienteSocket();
     }
 
-    /**
-     * Lista todos los hoteles desde el servidor
-     */
     public List<HotelDTO> listarHoteles() throws IOException {
         String respuestaJson = cliente.enviarOperacion("LISTAR_HOTELES");
         JSONObject respuesta = new JSONObject(respuestaJson);
@@ -39,11 +36,7 @@ public class ServicioHoteles {
         return hoteles;
     }
 
-    /**
-     * Guarda un nuevo hotel en el servidor
-     */
     public HotelDTO guardarHotel(String nombre, String ubicacion) throws IOException {
-        // Crear DTO temporal para enviar
         HotelDTO hotelTemp = new HotelDTO("", nombre, ubicacion);
         String hotelJson = JsonUtil.hotelToJson(hotelTemp).toString();
 
@@ -57,14 +50,10 @@ public class ServicioHoteles {
             throw new IOException("Error del servidor: " + respuesta.getString("mensaje"));
         }
 
-        // Retornar el hotel guardado con su código generado
         JSONObject hotelGuardado = respuesta.getJSONObject("hotel");
         return JsonUtil.jsonToHotel(hotelGuardado);
     }
 
-    /**
-     * Modifica un hotel existente en el servidor
-     */
     public boolean modificarHotel(HotelDTO hotel) throws IOException {
         String hotelJson = JsonUtil.hotelToJson(hotel).toString();
 
@@ -81,9 +70,6 @@ public class ServicioHoteles {
         return true;
     }
 
-    /**
-     * Elimina un hotel del servidor
-     */
     public boolean eliminarHotel(String codigo) throws IOException {
         String respuestaJson = cliente.enviarOperacion("ELIMINAR_HOTEL", codigo);
         JSONObject respuesta = new JSONObject(respuestaJson);
@@ -98,9 +84,6 @@ public class ServicioHoteles {
         return true;
     }
 
-    /**
-     * Obtiene el nombre de un hotel por su código
-     */
     public String obtenerNombreHotel(String codigoHotel) throws IOException {
         try {
             List<HotelDTO> hoteles = listarHoteles();

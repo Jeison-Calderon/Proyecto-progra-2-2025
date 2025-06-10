@@ -11,9 +11,8 @@ import java.util.stream.Collectors;
 public class ReservasData {
     private static final String ARCHIVO_RESERVAS = "reservas.dat";
 
-    /**
-     * Lista todas las reservas desde el archivo
-     */
+    //Lista todas las reservas desde el archivo
+
     public static List<ReservaDTO> listar() {
         List<ReservaDTO> reservas = new ArrayList<>();
         File archivo = new File(ARCHIVO_RESERVAS);
@@ -47,9 +46,7 @@ public class ReservasData {
         return reservas;
     }
 
-    /**
-     * Guarda una reserva en el archivo
-     */
+     //Guarda una reserva en el archivo
     public static boolean guardar(ReservaDTO reserva) {
         if (reserva == null || !reserva.esValida()) {
             System.err.println("❌ Reserva inválida para guardar");
@@ -77,9 +74,8 @@ public class ReservasData {
         return guardarTodas(reservas);
     }
 
-    /**
-     * Modifica una reserva existente
-     */
+
+     //Modifica una reserva existente
     public static boolean modificar(ReservaDTO reservaModificada) {
         if (reservaModificada == null || !reservaModificada.esValida()) {
             System.err.println("❌ Reserva inválida para modificar");
@@ -114,9 +110,7 @@ public class ReservasData {
         return guardarTodas(reservas);
     }
 
-    /**
-     * Elimina una reserva por código
-     */
+     //Elimina una reserva por código
     public static boolean eliminar(String codigo) {
         if (codigo == null || codigo.trim().isEmpty()) {
             System.err.println("❌ Código de reserva inválido para eliminar");
@@ -134,9 +128,7 @@ public class ReservasData {
         return guardarTodas(reservas);
     }
 
-    /**
-     * Busca una reserva por código
-     */
+    //Busca una reserva por código
     public static ReservaDTO buscarPorCodigo(String codigo) {
         return listar().stream()
                 .filter(r -> r.getCodigo().equals(codigo))
@@ -144,39 +136,30 @@ public class ReservasData {
                 .orElse(null);
     }
 
-    /**
-     * ✅ MÉTODOS ESPECÍFICOS PARA CONSULTA DE DISPONIBILIDAD
-     */
-
-    /**
-     * Obtiene habitaciones disponibles en un rango de fechas
-     */
+    //Obtener habitaciones disponibles en un rango de fechas
     public static List<String> obtenerHabitacionesDisponibles(LocalDate fechaDesde, LocalDate fechaHasta, String codigoHotel) {
         List<ReservaDTO> reservasActivas = listar().stream()
                 .filter(ReservaDTO::estaActiva)
                 .filter(r -> codigoHotel == null || codigoHotel.equals(r.getCodigoHotel()))
                 .collect(Collectors.toList());
 
-        // Obtener todas las habitaciones del hotel
+        //Obtener todas las habitaciones del hotel
         List<String> todasHabitaciones = obtenerTodasHabitacionesDelHotel(codigoHotel);
         List<String> habitacionesOcupadas = new ArrayList<>();
 
-        // Encontrar habitaciones ocupadas en el rango de fechas
+        //Encontrar habitaciones ocupadas en el rango de fechas
         for (ReservaDTO reserva : reservasActivas) {
             if (reserva.seSuperponeConPeriodo(fechaDesde, fechaHasta)) {
                 habitacionesOcupadas.add(reserva.getCodigoHabitacion());
             }
         }
 
-        // Retornar habitaciones disponibles
         return todasHabitaciones.stream()
                 .filter(h -> !habitacionesOcupadas.contains(h))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Verifica si una habitación específica está disponible
-     */
+    //Verifica si una habitación específica está disponible
     public static boolean estaHabitacionDisponible(String codigoHabitacion, LocalDate fechaDesde, LocalDate fechaHasta) {
         return listar().stream()
                 .filter(ReservaDTO::estaActiva)
@@ -184,9 +167,7 @@ public class ReservasData {
                 .noneMatch(r -> r.seSuperponeConPeriodo(fechaDesde, fechaHasta));
     }
 
-    /**
-     * Obtiene reservas de una habitación específica
-     */
+    //Obtiene reservas de una habitación específica
     public static List<ReservaDTO> obtenerReservasPorHabitacion(String codigoHabitacion) {
         return listar().stream()
                 .filter(r -> r.getCodigoHabitacion().equals(codigoHabitacion))
@@ -194,31 +175,21 @@ public class ReservasData {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene reservas de un hotel específico
-     */
+    //Obtiene reservas de un hotel específico
     public static List<ReservaDTO> obtenerReservasPorHotel(String codigoHotel) {
         return listar().stream()
                 .filter(r -> codigoHotel.equals(r.getCodigoHotel()))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene reservas en un rango de fechas
-     */
+    //Obtiene reservas en un rango de fechas
     public static List<ReservaDTO> obtenerReservasEnPeriodo(LocalDate fechaDesde, LocalDate fechaHasta) {
         return listar().stream()
                 .filter(r -> r.seSuperponeConPeriodo(fechaDesde, fechaHasta))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * ✅ MÉTODOS AUXILIARES PRIVADOS
-     */
-
-    /**
-     * Guarda todas las reservas en el archivo
-     */
+    //Guarda todas las reservas en el archivo
     private static boolean guardarTodas(List<ReservaDTO> reservas) {
         try (FileOutputStream fos = new FileOutputStream(ARCHIVO_RESERVAS);
              ObjectOutputStream oos = new ObjectOutputStream(fos)) {
@@ -237,9 +208,6 @@ public class ReservasData {
         }
     }
 
-    /**
-     * Verifica si hay conflicto de fechas para una reserva
-     */
     private static boolean hayConflictoFechas(ReservaDTO nuevaReserva, List<ReservaDTO> reservasExistentes) {
         return reservasExistentes.stream()
                 .filter(ReservaDTO::estaActiva)
@@ -247,12 +215,8 @@ public class ReservasData {
                 .anyMatch(r -> r.seSuperponeConPeriodo(nuevaReserva.getFechaDesde(), nuevaReserva.getFechaHasta()));
     }
 
-    /**
-     * Obtiene todas las habitaciones de un hotel (integración con HabitacionesData)
-     */
     private static List<String> obtenerTodasHabitacionesDelHotel(String codigoHotel) {
         try {
-            // Integración con HabitacionesData existente
             return HabitacionesData.listar().stream()
                     .filter(h -> codigoHotel == null || codigoHotel.equals(h.getCodigoHotel()))
                     .map(h -> h.getCodigo())
@@ -263,13 +227,7 @@ public class ReservasData {
         }
     }
 
-    /**
-     * ✅ MÉTODOS UTILITARIOS
-     */
-
-    /**
-     * Genera próximo código de reserva
-     */
+    //Codigos de reservas
     public static String generarProximoCodigo() {
         List<ReservaDTO> reservas = listar();
         int maxNumero = 0;
@@ -289,18 +247,13 @@ public class ReservasData {
         return String.format("RES%04d", maxNumero + 1);
     }
 
-    /**
-     * Cuenta reservas activas
-     */
     public static long contarReservasActivas() {
         return listar().stream()
                 .filter(ReservaDTO::estaActiva)
                 .count();
     }
 
-    /**
-     * Finaliza reservas vencidas automáticamente
-     */
+    //Finalizar reservas vencidas automáticamente
     public static int finalizarReservasVencidas() {
         List<ReservaDTO> reservas = listar();
         LocalDate hoy = LocalDate.now();

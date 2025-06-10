@@ -7,35 +7,30 @@ import java.util.List;
 public class HabitacionDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    // ✅ Campos existentes
     private String codigo;
     private String estilo;
     private double precio;
     private String codigoHotel;
 
-    // ✅ NUEVOS campos para disponibilidad
-    private String estado;              // disponible, ocupada, mantenimiento
-    private String numero;              // número de habitación (ej: 101, 102, 201)
-    private List<String> imagenes;      // paths/URLs de imágenes de la habitación
+    private String estado;
+    private String numero;
+    private List<String> imagenes;
 
-    // ✅ Constructor vacío
     public HabitacionDTO() {
         this.imagenes = new ArrayList<>();
-        this.estado = "disponible"; // Estado por defecto
+        this.estado = "disponible";
     }
 
-    // ✅ Constructor original (mantiene compatibilidad)
     public HabitacionDTO(String codigo, String estilo, double precio, String codigoHotel) {
         this.codigo = codigo;
         this.estilo = estilo;
         this.precio = precio;
         this.codigoHotel = codigoHotel;
         this.imagenes = new ArrayList<>();
-        this.estado = "disponible"; // Estado por defecto
-        this.numero = ""; // Se puede asignar después
+        this.estado = "disponible";
+        this.numero = "";
     }
 
-    // ✅ Constructor extendido NUEVO
     public HabitacionDTO(String codigo, String estilo, double precio, String codigoHotel,
                          String numero, String estado) {
         this.codigo = codigo;
@@ -47,7 +42,6 @@ public class HabitacionDTO implements Serializable {
         this.imagenes = new ArrayList<>();
     }
 
-    // ✅ Constructor completo NUEVO
     public HabitacionDTO(String codigo, String estilo, double precio, String codigoHotel,
                          String numero, String estado, List<String> imagenes) {
         this.codigo = codigo;
@@ -59,7 +53,6 @@ public class HabitacionDTO implements Serializable {
         this.imagenes = imagenes != null ? new ArrayList<>(imagenes) : new ArrayList<>();
     }
 
-    // ✅ Constructor para compatibilidad (mantiene funcionalidad existente)
     public HabitacionDTO(String codigo, String estilo, double precio) {
         this.codigo = codigo;
         this.estilo = estilo;
@@ -70,7 +63,6 @@ public class HabitacionDTO implements Serializable {
         this.numero = "";
     }
 
-    // ✅ Getters y Setters EXISTENTES
     public String getCodigo() { return codigo; }
     public void setCodigo(String codigo) { this.codigo = codigo; }
 
@@ -83,7 +75,6 @@ public class HabitacionDTO implements Serializable {
     public String getCodigoHotel() { return codigoHotel; }
     public void setCodigoHotel(String codigoHotel) { this.codigoHotel = codigoHotel; }
 
-    // ✅ NUEVOS Getters y Setters
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado = estado; }
 
@@ -95,7 +86,6 @@ public class HabitacionDTO implements Serializable {
         this.imagenes = imagenes != null ? new ArrayList<>(imagenes) : new ArrayList<>();
     }
 
-    // ✅ MÉTODOS AUXILIARES para manejo de imágenes
     public void agregarImagen(String rutaImagen) {
         if (rutaImagen != null && !rutaImagen.trim().isEmpty()) {
             this.imagenes.add(rutaImagen);
@@ -114,7 +104,6 @@ public class HabitacionDTO implements Serializable {
         return this.imagenes.isEmpty() ? null : this.imagenes.get(0);
     }
 
-    // ✅ MÉTODOS AUXILIARES para estado
     public boolean estaDisponible() {
         return "disponible".equalsIgnoreCase(this.estado);
     }
@@ -127,7 +116,6 @@ public class HabitacionDTO implements Serializable {
         return "mantenimiento".equalsIgnoreCase(this.estado);
     }
 
-    // ✅ ToString actualizado
     @Override
     public String toString() {
         return "HabitacionDTO{" +
@@ -141,7 +129,6 @@ public class HabitacionDTO implements Serializable {
                 '}';
     }
 
-    // ✅ MÉTODO para mostrar información completa
     public String toStringCompleto() {
         return "HabitacionDTO{" +
                 "codigo='" + codigo + '\'' +

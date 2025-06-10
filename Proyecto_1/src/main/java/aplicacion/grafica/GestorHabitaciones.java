@@ -22,12 +22,10 @@ import java.util.Optional;
 
 public class GestorHabitaciones {
 
-    // ✅ SERVICIOS - Solo comunicación con servidor
     private ServicioHabitaciones servicioHabitaciones;
     private NotificacionManager notificacionManager;
     private TabManager tabManager;
 
-    // ✅ DATOS POR HOTEL - ObservableList para UI
     private ObservableList<HabitacionDTO> habitacionesActuales;
     private TableView<HabitacionDTO> tablaHabitaciones;
     private HotelDTO hotelActual;
@@ -41,7 +39,6 @@ public class GestorHabitaciones {
         this.habitacionesActuales = FXCollections.observableArrayList();
     }
 
-    // ✅ CREAR VISTA COMPLETA DE HABITACIONES PARA UN HOTEL
     public VBox crearVistaParaHotel(HotelDTO hotel) {
         this.hotelActual = hotel;
 
@@ -51,30 +48,24 @@ public class GestorHabitaciones {
         Label lblTitulo = new Label("Habitaciones del Hotel: " + hotel.getNombre());
         lblTitulo.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        // ✅ BARRA DE BÚSQUEDA
         HBox boxBusqueda = crearBarraBusqueda();
 
-        // ✅ BOTÓN CREAR HABITACIÓN
         Button btnNuevaHabitacion = new Button("Crear Nueva Habitación");
         btnNuevaHabitacion.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
         btnNuevaHabitacion.setOnAction(e -> mostrarFormularioCrear());
 
-        // ✅ TABLA DE HABITACIONES
         tablaHabitaciones = crearTablaHabitaciones();
 
-        // ✅ BOTÓN VOLVER
         Button btnVolver = new Button("Volver a lista de hoteles");
         btnVolver.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white;");
         btnVolver.setOnAction(e -> volverAHoteles());
 
-        // ✅ CARGAR DATOS INICIALES DESDE SERVIDOR
         cargarDatosDesdeServidor();
 
         contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevaHabitacion, tablaHabitaciones, btnVolver);
         return contenedor;
     }
 
-    // ✅ CREAR BARRA DE BÚSQUEDA
     private HBox crearBarraBusqueda() {
         HBox boxBusqueda = new HBox(10);
         TextField txtBuscar = new TextField();
@@ -86,7 +77,6 @@ public class GestorHabitaciones {
         Button btnListar = new Button("Listar");
         btnListar.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
 
-        // ✅ EVENTOS DE BÚSQUEDA
         btnBuscar.setOnAction(e -> buscarHabitaciones(txtBuscar.getText()));
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
@@ -97,12 +87,10 @@ public class GestorHabitaciones {
         return boxBusqueda;
     }
 
-    // ✅ CREAR TABLA DE HABITACIONES CON ACCIONES
     private TableView<HabitacionDTO> crearTablaHabitaciones() {
         TableView<HabitacionDTO> tabla = new TableView<>();
         tabla.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // ✅ COLUMNAS
         TableColumn<HabitacionDTO, String> colCodigo = new TableColumn<>("ID");
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
 
@@ -112,7 +100,6 @@ public class GestorHabitaciones {
         TableColumn<HabitacionDTO, Double> colPrecio = new TableColumn<>("Precio");
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
 
-        // ✅ COLUMNA DE ACCIONES
         TableColumn<HabitacionDTO, Void> colAccion = new TableColumn<>("Acción");
         colAccion.setCellFactory(param -> new TableCell<HabitacionDTO, Void>() {
             private final HBox contenedor = new HBox(5);
@@ -150,14 +137,13 @@ public class GestorHabitaciones {
         return tabla;
     }
 
-    // ✅ CARGAR DATOS DESDE SERVIDOR
     public void cargarDatosDesdeServidor() {
         if (hotelActual == null) return;
 
         Task<List<HabitacionDTO>> task = new Task<>() {
             @Override
             protected List<HabitacionDTO> call() throws Exception {
-                return servicioHabitaciones.listarHabitacionesPorHotel(hotelActual.getCodigo()); // ← SERVIDOR
+                return servicioHabitaciones.listarHabitacionesPorHotel(hotelActual.getCodigo());
             }
         };
 
@@ -175,7 +161,6 @@ public class GestorHabitaciones {
         new Thread(task).start();
     }
 
-    // ✅ BUSCAR HABITACIONES (FILTRO LOCAL)
     private void buscarHabitaciones(String query) {
         String queryLower = query.trim().toLowerCase();
         if (queryLower.isEmpty()) {
@@ -192,13 +177,11 @@ public class GestorHabitaciones {
         }
     }
 
-    // ✅ MOSTRAR FORMULARIO CREAR
     private void mostrarFormularioCrear() {
         Optional<HabitacionDTO> resultado = VistaFormularios.mostrarFormularioNuevaHabitacion(hotelActual);
         resultado.ifPresent(habitacion -> crearHabitacionEnServidor(habitacion));
     }
 
-    // ✅ CREAR HABITACIÓN EN SERVIDOR
     private void crearHabitacionEnServidor(HabitacionDTO habitacion) {
         Task<HabitacionDTO> task = new Task<>() {
             @Override
@@ -207,7 +190,7 @@ public class GestorHabitaciones {
                         habitacion.getEstilo(),
                         habitacion.getPrecio(),
                         hotelActual.getCodigo()
-                ); // ← SERVIDOR
+                );
                 return new HabitacionDTO(codigo, habitacion.getEstilo(), habitacion.getPrecio(), hotelActual.getCodigo());
             }
         };
@@ -216,7 +199,6 @@ public class GestorHabitaciones {
             HabitacionDTO habitacionGuardada = task.getValue();
             notificacionManager.habitacionCreada(habitacionGuardada.getCodigo());
 
-            // ✅ AGREGAR DIRECTAMENTE A LA LISTA VISIBLE (SOLUCIÓN 2)
             Platform.runLater(() -> {
                 habitacionesActuales.add(habitacionGuardada);
                 if (tablaHabitaciones != null) {
@@ -237,25 +219,23 @@ public class GestorHabitaciones {
         new Thread(task).start();
     }
 
-    // ✅ EDITAR HABITACIÓN
     private void editarHabitacion(HabitacionDTO habitacion) {
         Optional<HabitacionDTO> resultado = VistaFormularios.mostrarFormularioEditarHabitacion(habitacion);
         resultado.ifPresent(habitacionModificada -> modificarHabitacionEnServidor(habitacionModificada));
     }
 
-    // ✅ MODIFICAR HABITACIÓN EN SERVIDOR
     private void modificarHabitacionEnServidor(HabitacionDTO habitacion) {
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
-                return servicioHabitaciones.modificarHabitacion(habitacion); // ← SERVIDOR
+                return servicioHabitaciones.modificarHabitacion(habitacion);
             }
         };
 
         task.setOnSucceeded(e -> {
             if (task.getValue()) {
                 notificacionManager.habitacionModificada();
-                cargarDatosDesdeServidor(); // ✅ REFRESCAR DESDE SERVIDOR
+                cargarDatosDesdeServidor();
             } else {
                 notificacionManager.errorGenerico("No se pudo modificar la habitación");
             }
@@ -268,7 +248,6 @@ public class GestorHabitaciones {
         new Thread(task).start();
     }
 
-    // ✅ CONFIRMAR ELIMINACIÓN
     private void confirmarEliminarHabitacion(HabitacionDTO habitacion) {
         String mensaje = "Habitación: " + habitacion.getEstilo() + " (ID: " + habitacion.getCodigo() + ")";
         boolean confirmado = VistaFormularios.confirmarEliminacion("habitación", mensaje);
@@ -278,19 +257,18 @@ public class GestorHabitaciones {
         }
     }
 
-    // ✅ ELIMINAR HABITACIÓN EN SERVIDOR
     private void eliminarHabitacionEnServidor(HabitacionDTO habitacion) {
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
-                return servicioHabitaciones.eliminarHabitacion(habitacion.getCodigo()); // ← SERVIDOR
+                return servicioHabitaciones.eliminarHabitacion(habitacion.getCodigo());
             }
         };
 
         task.setOnSucceeded(e -> {
             if (task.getValue()) {
                 notificacionManager.habitacionEliminada();
-                cargarDatosDesdeServidor(); // ✅ REFRESCAR DESDE SERVIDOR
+                cargarDatosDesdeServidor();
             } else {
                 notificacionManager.errorGenerico("No se pudo eliminar la habitación");
             }
@@ -303,12 +281,10 @@ public class GestorHabitaciones {
         new Thread(task).start();
     }
 
-    // ✅ VOLVER A LISTA DE HOTELES
     private void volverAHoteles() {
         tabManager.volverAPrincipal();
     }
 
-    // ✅ CREAR PESTAÑA PARA EL HOTEL
     public Tab crearPestanaParaHotel(HotelDTO hotel) {
         Tab tab = tabManager.crearPestana("Habitaciones: " + hotel.getNombre(), true);
         VBox contenido = crearVistaParaHotel(hotel);
@@ -316,17 +292,14 @@ public class GestorHabitaciones {
         return tab;
     }
 
-    // ✅ GETTER PARA LA TABLA (si necesario)
     public TableView<HabitacionDTO> getTabla() {
         return tablaHabitaciones;
     }
 
-    // ✅ GETTER PARA LOS DATOS (si necesario)
     public ObservableList<HabitacionDTO> getDatos() {
         return habitacionesActuales;
     }
 
-    // ✅ GETTER PARA EL HOTEL ACTUAL
     public HotelDTO getHotelActual() {
         return hotelActual;
     }

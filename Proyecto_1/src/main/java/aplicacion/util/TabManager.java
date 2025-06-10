@@ -11,20 +11,17 @@ public class TabManager {
         this.tabPane = tabPane;
     }
 
-    // ✅ CREAR PESTAÑA
     public Tab crearPestana(String titulo, boolean esCerrable) {
         Tab tab = new Tab(titulo);
         tab.setClosable(esCerrable);
         return tab;
     }
 
-    // ✅ AGREGAR PESTAÑA Y SELECCIONARLA
     public void agregarYSeleccionar(Tab tab) {
         tabPane.getTabs().add(tab);
         tabPane.getSelectionModel().select(tab);
     }
 
-    // ✅ CERRAR PESTAÑAS TEMPORALES (mantener solo la primera)
     public void cerrarPestanasTemporales() {
         while (tabPane.getTabs().size() > 1) {
             tabPane.getTabs().remove(1);
@@ -32,7 +29,6 @@ public class TabManager {
         tabPane.getSelectionModel().selectFirst();
     }
 
-    // ✅ BUSCAR PESTAÑA POR PREFIJO EN EL TÍTULO
     public Tab buscarPestanaPorTitulo(String prefijo) {
         for (Tab tab : tabPane.getTabs()) {
             if (tab.getText().startsWith(prefijo)) {
@@ -42,7 +38,6 @@ public class TabManager {
         return null;
     }
 
-    // ✅ SELECCIONAR PESTAÑA POR PREFIJO
     public boolean seleccionarPestana(String prefijo) {
         Tab tab = buscarPestanaPorTitulo(prefijo);
         if (tab != null) {
@@ -52,27 +47,22 @@ public class TabManager {
         return false;
     }
 
-    // ✅ VOLVER A LA PESTAÑA PRINCIPAL
     public void volverAPrincipal() {
         tabPane.getSelectionModel().selectFirst();
     }
 
-    // ✅ REMOVER PESTAÑA ESPECÍFICA
     public void removerPestana(Tab tab) {
         tabPane.getTabs().remove(tab);
     }
 
-    // ✅ VERIFICAR SI EXISTE PESTAÑA
     public boolean existePestana(String prefijo) {
         return buscarPestanaPorTitulo(prefijo) != null;
     }
 
-    // ✅ OBTENER PESTAÑA ACTIVA
     public Tab getPestanaActiva() {
         return tabPane.getSelectionModel().getSelectedItem();
     }
 
-    // ✅ REEMPLAZAR PESTAÑAS TEMPORALES (cerrar todas y abrir nueva)
     public void reemplazarConNueva(Tab nuevaPestana) {
         cerrarPestanasTemporales();
         agregarYSeleccionar(nuevaPestana);

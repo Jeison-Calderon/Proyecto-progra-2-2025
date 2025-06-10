@@ -24,17 +24,12 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Clase JavaFX para consulta de disponibilidad de habitaciones
- */
 public class ConsultaDisponibilidad {
 
-    // Servicios
     private ServicioHoteles servicioHoteles;
     private ServicioHabitaciones servicioHabitaciones;
     private ServicioReservas servicioReservas;
 
-    // Componentes de filtros
     private ComboBox<HotelItem> comboHotel;
     private DatePicker dateDesde;
     private DatePicker dateHasta;
@@ -316,8 +311,6 @@ public class ConsultaDisponibilidad {
                     }
                     comboHotel.getSelectionModel().selectFirst();
                 });
-
-                // Cargar estilos
                 List<HabitacionDTO> habitaciones = servicioHabitaciones.listarHabitaciones();
 
                 Platform.runLater(() -> {
@@ -642,12 +635,10 @@ public class ConsultaDisponibilidad {
                 if (resultado.isExito()) {
                     reservaCreada = true;
 
-                    // ✅ OBTENER CÓDIGO DE LA RESERVA CREADA
                     if (resultado.tieneReserva() && resultado.getReserva() != null) {
                         codigoReserva = resultado.getReserva().getCodigo();
                         System.out.println("✅ Código extraído de la reserva: " + codigoReserva);
                     } else {
-                        // ✅ FALLBACK: Buscar en el mensaje o usar timestamp
                         if (resultado.getMensaje().contains("código:")) {
                             codigoReserva = resultado.getMensaje().replaceAll(".*código: ", "").trim();
                         } else {

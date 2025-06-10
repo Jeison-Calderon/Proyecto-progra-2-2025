@@ -17,7 +17,6 @@ public class NotificacionManager {
         configurarArea();
     }
 
-    // ✅ CONFIGURACIÓN INICIAL DEL ÁREA
     private void configurarArea() {
         areaNotificaciones.setEditable(false);
         areaNotificaciones.setWrapText(true);
@@ -25,22 +24,18 @@ public class NotificacionManager {
         areaNotificaciones.setStyle(ESTILO_NORMAL);
     }
 
-    // ✅ NOTIFICACIÓN DE ÉXITO
     public void mostrarExito(String mensaje) {
         mostrarNotificacion(mensaje, ESTILO_EXITO, 3.0);
     }
 
-    // ✅ NOTIFICACIÓN DE ERROR
     public void mostrarError(String mensaje) {
         mostrarNotificacion(mensaje, ESTILO_ERROR, 5.0);
     }
 
-    // ✅ NOTIFICACIÓN DE INFORMACIÓN
     public void mostrarInfo(String mensaje) {
         mostrarNotificacion(mensaje, ESTILO_INFO, 3.0);
     }
 
-    // ✅ NOTIFICACIÓN PERSONALIZADA CON DURACIÓN
     public void mostrarNotificacion(String mensaje, boolean esExito) {
         if (esExito) {
             mostrarExito(mensaje);
@@ -49,25 +44,21 @@ public class NotificacionManager {
         }
     }
 
-    // ✅ MÉTODO PRINCIPAL PARA MOSTRAR NOTIFICACIONES
     private void mostrarNotificacion(String mensaje, String estilo, double duracionSegundos) {
         areaNotificaciones.clear();
         areaNotificaciones.appendText(mensaje + "\n");
         areaNotificaciones.setStyle(estilo);
 
-        // ✅ AUTO-LIMPIAR DESPUÉS DE LA DURACIÓN ESPECIFICADA
         PauseTransition delay = new PauseTransition(Duration.seconds(duracionSegundos));
         delay.setOnFinished(event -> limpiarNotificacion());
         delay.play();
     }
 
-    // ✅ LIMPIAR ÁREA DE NOTIFICACIONES
     public void limpiarNotificacion() {
         areaNotificaciones.clear();
         areaNotificaciones.setStyle(ESTILO_NORMAL);
     }
 
-    // ✅ NOTIFICACIONES ESPECÍFICAS PARA OPERACIONES CRUD
     public void hotelCreado(String codigo) {
         mostrarExito("Hotel registrado con código: " + codigo);
     }
@@ -92,7 +83,6 @@ public class NotificacionManager {
         mostrarExito("Habitación eliminada correctamente");
     }
 
-    // ✅ ERRORES COMUNES
     public void errorConexion(String detalle) {
         mostrarError("Error conectando al servidor: " + detalle);
     }

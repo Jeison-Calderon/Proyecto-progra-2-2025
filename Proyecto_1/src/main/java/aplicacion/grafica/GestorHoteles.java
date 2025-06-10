@@ -21,16 +21,13 @@ import java.util.function.Consumer;
 
 public class GestorHoteles {
 
-    // ✅ SERVICIOS - Solo comunicación con servidor
     private ServicioHoteles servicioHoteles;
     private NotificacionManager notificacionManager;
     private TabManager tabManager;
 
-    // ✅ DATOS - ObservableList para UI
     private ObservableList<HotelDTO> hotelesOriginales;
     private TableView<HotelDTO> tablaHoteles;
 
-    // ✅ CALLBACK para cuando se selecciona "Habitaciones"
     private Consumer<HotelDTO> onVerHabitaciones;
 
     public GestorHoteles(ServicioHoteles servicioHoteles,
@@ -42,12 +39,10 @@ public class GestorHoteles {
         this.hotelesOriginales = FXCollections.observableArrayList();
     }
 
-    // ✅ CONFIGURAR CALLBACK PARA HABITACIONES
     public void setOnVerHabitaciones(Consumer<HotelDTO> callback) {
         this.onVerHabitaciones = callback;
     }
 
-    // ✅ CREAR VISTA COMPLETA DE HOTELES
     public VBox crearVista() {
         VBox contenedor = new VBox(10);
         contenedor.setPadding(new Insets(20));
@@ -55,25 +50,20 @@ public class GestorHoteles {
         Label lblTitulo = new Label("Gestión de Hoteles");
         lblTitulo.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-        // ✅ BARRA DE BÚSQUEDA
         HBox boxBusqueda = crearBarraBusqueda();
 
-        // ✅ BOTÓN CREAR
         Button btnNuevoHotel = new Button("Crear Nuevo Hotel");
         btnNuevoHotel.setStyle("-fx-background-color: #007bff; -fx-text-fill: white;");
         btnNuevoHotel.setOnAction(e -> mostrarFormularioCrear());
 
-        // ✅ TABLA DE HOTELES
         tablaHoteles = crearTablaHoteles();
 
-        // ✅ CARGAR DATOS INICIALES DESDE SERVIDOR
         cargarDatosDesdeServidor();
 
         contenedor.getChildren().addAll(lblTitulo, boxBusqueda, btnNuevoHotel, tablaHoteles);
         return contenedor;
     }
 
-    // ✅ CREAR BARRA DE BÚSQUEDA
     private HBox crearBarraBusqueda() {
         HBox boxBusqueda = new HBox(10);
         TextField txtBuscar = new TextField();
@@ -85,7 +75,6 @@ public class GestorHoteles {
         Button btnListar = new Button("Listar");
         btnListar.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white;");
 
-        // ✅ EVENTOS DE BÚSQUEDA
         btnBuscar.setOnAction(e -> buscarHoteles(txtBuscar.getText()));
         btnListar.setOnAction(e -> {
             txtBuscar.clear();
@@ -96,12 +85,10 @@ public class GestorHoteles {
         return boxBusqueda;
     }
 
-    // ✅ CREAR TABLA DE HOTELES CON ACCIONES
     private TableView<HotelDTO> crearTablaHoteles() {
         TableView<HotelDTO> tabla = new TableView<>();
         tabla.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // ✅ COLUMNAS
         TableColumn<HotelDTO, String> colCodigo = new TableColumn<>("ID");
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
 
@@ -111,9 +98,8 @@ public class GestorHoteles {
         TableColumn<HotelDTO, String> colUbicacion = new TableColumn<>("Ubicación");
         colUbicacion.setCellValueFactory(new PropertyValueFactory<>("ubicacion"));
 
-        // ✅ COLUMNA DE ACCIONES
         TableColumn<HotelDTO, Void> colAccion = new TableColumn<>("Acción");
-        colAccion.setCellFactory(param -> new TableCell<HotelDTO, Void>() {
+        colAccion.setCellFactory(param -> new TableCell<>() {
             private final HBox contenedor = new HBox(5);
             private final Button btnHabitaciones = new Button("Habitaciones");
             private final Button btnEditar = new Button("Editar");
@@ -123,7 +109,6 @@ public class GestorHoteles {
                 btnHabitaciones.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-pref-width: 90;");
                 btnEditar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-pref-width: 60;");
                 btnBorrar.setStyle("-fx-background-color: #dc3545; -fx-text-fill: white; -fx-pref-width: 60;");
-
                 contenedor.getChildren().addAll(btnHabitaciones, btnEditar, btnBorrar);
                 contenedor.setAlignment(Pos.CENTER);
             }
@@ -131,12 +116,10 @@ public class GestorHoteles {
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-
                 if (empty || getTableRow() == null || getTableRow().getItem() == null) {
                     setGraphic(null);
                 } else {
                     HotelDTO hotel = getTableRow().getItem();
-
                     btnHabitaciones.setOnAction(e -> {
                         if (onVerHabitaciones != null) {
                             onVerHabitaciones.accept(hotel);
@@ -144,7 +127,6 @@ public class GestorHoteles {
                     });
                     btnEditar.setOnAction(e -> editarHotel(hotel));
                     btnBorrar.setOnAction(e -> confirmarEliminarHotel(hotel));
-
                     setGraphic(contenedor);
                 }
             }
@@ -152,16 +134,14 @@ public class GestorHoteles {
 
         tabla.getColumns().addAll(colCodigo, colNombre, colUbicacion, colAccion);
         tabla.setItems(hotelesOriginales);
-
         return tabla;
     }
 
-    // ✅ CARGAR DATOS DESDE SERVIDOR
     public void cargarDatosDesdeServidor() {
         Task<List<HotelDTO>> task = new Task<>() {
             @Override
             protected List<HotelDTO> call() throws Exception {
-                return servicioHoteles.listarHoteles(); // ← SERVIDOR
+                return servicioHoteles.listarHoteles();
             }
         };
 
@@ -177,7 +157,6 @@ public class GestorHoteles {
         new Thread(task).start();
     }
 
-    // ✅ BUSCAR HOTELES (FILTRO LOCAL)
     private void buscarHoteles(String query) {
         String queryLower = query.trim().toLowerCase();
         if (queryLower.isEmpty()) {
@@ -194,25 +173,23 @@ public class GestorHoteles {
         }
     }
 
-    // ✅ MOSTRAR FORMULARIO CREAR
     private void mostrarFormularioCrear() {
         Optional<HotelDTO> resultado = VistaFormularios.mostrarFormularioNuevoHotel();
-        resultado.ifPresent(hotel -> crearHotelEnServidor(hotel));
+        resultado.ifPresent(this::crearHotelEnServidor);
     }
 
-    // ✅ CREAR HOTEL EN SERVIDOR
     private void crearHotelEnServidor(HotelDTO hotel) {
         Task<HotelDTO> task = new Task<>() {
             @Override
             protected HotelDTO call() throws Exception {
-                return servicioHoteles.guardarHotel(hotel.getNombre(), hotel.getUbicacion()); // ← SERVIDOR
+                return servicioHoteles.guardarHotel(hotel.getNombre(), hotel.getUbicacion());
             }
         };
 
         task.setOnSucceeded(e -> {
             HotelDTO hotelGuardado = task.getValue();
             notificacionManager.hotelCreado(hotelGuardado.getCodigo());
-            cargarDatosDesdeServidor(); // ✅ REFRESCAR DESDE SERVIDOR
+            cargarDatosDesdeServidor();
         });
 
         task.setOnFailed(e -> {
@@ -227,25 +204,23 @@ public class GestorHoteles {
         new Thread(task).start();
     }
 
-    // ✅ EDITAR HOTEL
     private void editarHotel(HotelDTO hotel) {
         Optional<HotelDTO> resultado = VistaFormularios.mostrarFormularioEditarHotel(hotel);
-        resultado.ifPresent(hotelModificado -> modificarHotelEnServidor(hotelModificado));
+        resultado.ifPresent(this::modificarHotelEnServidor);
     }
 
-    // ✅ MODIFICAR HOTEL EN SERVIDOR
     private void modificarHotelEnServidor(HotelDTO hotel) {
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
-                return servicioHoteles.modificarHotel(hotel); // ← SERVIDOR
+                return servicioHoteles.modificarHotel(hotel);
             }
         };
 
         task.setOnSucceeded(e -> {
             if (task.getValue()) {
                 notificacionManager.hotelModificado();
-                cargarDatosDesdeServidor(); // ✅ REFRESCAR DESDE SERVIDOR
+                cargarDatosDesdeServidor();
             } else {
                 notificacionManager.errorGenerico("No se pudo modificar el hotel");
             }
@@ -258,29 +233,26 @@ public class GestorHoteles {
         new Thread(task).start();
     }
 
-    // ✅ CONFIRMAR ELIMINACIÓN
     private void confirmarEliminarHotel(HotelDTO hotel) {
         String mensaje = "Hotel: " + hotel.getNombre() + " (ID: " + hotel.getCodigo() + ")";
         boolean confirmado = VistaFormularios.confirmarEliminacion("hotel", mensaje);
-
         if (confirmado) {
             eliminarHotelEnServidor(hotel);
         }
     }
 
-    // ✅ ELIMINAR HOTEL EN SERVIDOR
     private void eliminarHotelEnServidor(HotelDTO hotel) {
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
-                return servicioHoteles.eliminarHotel(hotel.getCodigo()); // ← SERVIDOR
+                return servicioHoteles.eliminarHotel(hotel.getCodigo());
             }
         };
 
         task.setOnSucceeded(e -> {
             if (task.getValue()) {
                 notificacionManager.hotelEliminado();
-                cargarDatosDesdeServidor(); // ✅ REFRESCAR DESDE SERVIDOR
+                cargarDatosDesdeServidor();
             } else {
                 notificacionManager.errorGenerico("No se pudo eliminar el hotel");
             }
@@ -293,12 +265,10 @@ public class GestorHoteles {
         new Thread(task).start();
     }
 
-    // ✅ GETTER PARA LA TABLA (si necesario)
     public TableView<HotelDTO> getTabla() {
         return tablaHoteles;
     }
 
-    // ✅ GETTER PARA LOS DATOS (si necesario)
     public ObservableList<HotelDTO> getDatos() {
         return hotelesOriginales;
     }

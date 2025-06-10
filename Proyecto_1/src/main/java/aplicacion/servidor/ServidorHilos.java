@@ -32,7 +32,6 @@ public class ServidorHilos extends Thread {
             System.out.println("📡 Operación recibida: " + operacion);
 
             switch (operacion) {
-                // ✅ OPERACIONES EXISTENTES DE HOTELES
                 case "LISTAR_HOTELES":
                     manejarListarHoteles(salida);
                     break;
@@ -46,7 +45,6 @@ public class ServidorHilos extends Thread {
                     manejarModificarHotel(entrada, salida);
                     break;
 
-                // ✅ OPERACIONES EXISTENTES DE HABITACIONES
                 case "LISTAR_HABITACIONES":
                     manejarListarHabitaciones(salida);
                     break;
@@ -60,7 +58,6 @@ public class ServidorHilos extends Thread {
                     manejarModificarHabitacion(entrada, salida);
                     break;
 
-                // ✅ NUEVAS OPERACIONES DE DISPONIBILIDAD Y RESERVAS
                 case "CONSULTAR_DISPONIBILIDAD":
                     manejarConsultarDisponibilidad(entrada, salida);
                     break;
@@ -86,7 +83,6 @@ public class ServidorHilos extends Thread {
                     manejarFinalizarReservasVencidas(salida);
                     break;
 
-                // ✅ OPERACIONES AUXILIARES
                 case "ENVIAR_ARCHIVO":
                     manejarEnviarArchivo(entrada, salida);
                     break;
@@ -108,7 +104,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    // ✅ =================== OPERACIONES EXISTENTES (sin cambios) ===================
 
     private void manejarListarHoteles(DataOutputStream salida) throws IOException {
         try {
@@ -327,12 +322,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    // ✅ =================== NUEVAS OPERACIONES DE DISPONIBILIDAD ===================
-
-    /**
-     * Consulta completa de disponibilidad por fechas
-     * Entrada JSON: {"fechaDesde": "2025-06-10", "fechaHasta": "2025-06-15", "codigoHotel": "HOT001"}
-     */
     private void manejarConsultarDisponibilidad(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String consultaJson = entrada.readUTF();
@@ -342,7 +331,6 @@ public class ServidorHilos extends Thread {
             String fechaHastaStr = jsonConsulta.getString("fechaHasta");
             String codigoHotel = jsonConsulta.optString("codigoHotel", null);
 
-            // ✅ Convertir fechas
             LocalDate fechaDesde = JsonUtil.stringToFecha(fechaDesdeStr);
             LocalDate fechaHasta = JsonUtil.stringToFecha(fechaHastaStr);
 
@@ -351,10 +339,8 @@ public class ServidorHilos extends Thread {
                 return;
             }
 
-            // ✅ Obtener habitaciones disponibles
             List<String> codigosDisponibles = ReservasData.obtenerHabitacionesDisponibles(fechaDesde, fechaHasta, codigoHotel);
 
-            // ✅ Cargar información completa de habitaciones
             List<HabitacionDTO> todasHabitaciones = HabitacionesData.listar();
             List<HabitacionDTO> habitacionesDisponibles = todasHabitaciones.stream()
                     .filter(h -> codigosDisponibles.contains(h.getCodigo()))
@@ -362,7 +348,6 @@ public class ServidorHilos extends Thread {
                     .filter(HabitacionDTO::estaDisponible)
                     .collect(Collectors.toList());
 
-            // ✅ Obtener reservas en el período
             List<ReservaDTO> reservasEnPeriodo = ReservasData.obtenerReservasEnPeriodo(fechaDesde, fechaHasta);
             if (codigoHotel != null) {
                 reservasEnPeriodo = reservasEnPeriodo.stream()
@@ -370,7 +355,6 @@ public class ServidorHilos extends Thread {
                         .collect(Collectors.toList());
             }
 
-            // ✅ Crear respuesta completa
             JSONObject respuesta = JsonUtil.crearRespuestaConsultaDisponibilidad(
                     habitacionesDisponibles, reservasEnPeriodo, fechaDesdeStr, fechaHastaStr, codigoHotel);
 
@@ -382,10 +366,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    /**
-     * Lista habitaciones disponibles (más simple que consulta completa)
-     * Entrada JSON: {"fechaDesde": "2025-06-10", "fechaHasta": "2025-06-15", "codigoHotel": "HOT001"}
-     */
     private void manejarHabitacionesDisponibles(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String consultaJson = entrada.readUTF();
@@ -425,12 +405,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    // ✅ =================== OPERACIONES DE RESERVAS ===================
-
-    /**
-     * Lista todas las reservas o filtradas por hotel
-     * Entrada JSON: {"codigoHotel": "HOT001"} (opcional)
-     */
     private void manejarListarReservas(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String filtroJson = entrada.readUTF();
@@ -457,23 +431,17 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    /**
-     * Crea nueva reserva
-     * Entrada JSON: ReservaDTO completo
-     */
     private void manejarCrearReserva(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String reservaJson = entrada.readUTF();
             JSONObject jsonReserva = new JSONObject(reservaJson);
             ReservaDTO reservaDTO = JsonUtil.jsonToReserva(jsonReserva);
 
-            // ✅ Validar datos
             if (!reservaDTO.esValida()) {
                 enviarError(salida, "Datos de reserva inválidos");
                 return;
             }
 
-            // ✅ Generar código si no existe
             if (reservaDTO.getCodigo() == null || reservaDTO.getCodigo().trim().isEmpty()) {
                 reservaDTO.setCodigo(ReservasData.generarProximoCodigo());
             }
@@ -497,9 +465,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    /**
-     * Modifica reserva existente
-     */
     private void manejarModificarReserva(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String reservaJson = entrada.readUTF();
@@ -524,9 +489,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    /**
-     * Elimina reserva por código
-     */
     private void manejarEliminarReserva(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String codigo = entrada.readUTF();
@@ -548,9 +510,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    /**
-     * Busca reserva por código
-     */
     private void manejarBuscarReserva(DataInputStream entrada, DataOutputStream salida) throws IOException {
         try {
             String codigo = entrada.readUTF();
@@ -573,9 +532,6 @@ public class ServidorHilos extends Thread {
         }
     }
 
-    /**
-     * Finaliza reservas vencidas automáticamente
-     */
     private void manejarFinalizarReservasVencidas(DataOutputStream salida) throws IOException {
         try {
             int finalizadas = ReservasData.finalizarReservasVencidas();
@@ -591,8 +547,6 @@ public class ServidorHilos extends Thread {
             enviarError(salida, "Error al finalizar reservas vencidas: " + e.getMessage());
         }
     }
-
-    // ✅ =================== MÉTODO AUXILIAR ===================
 
     private void enviarError(DataOutputStream salida, String mensaje) throws IOException {
         JSONObject respuesta = JsonUtil.crearRespuestaError(mensaje);

@@ -13,10 +13,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Servicio para gestión de reservas y consultas de disponibilidad
- * Maneja toda la comunicación con el servidor para operaciones de reservas
- */
 public class ServicioReservas {
     private ClienteSocket cliente;
 
@@ -24,13 +20,8 @@ public class ServicioReservas {
         this.cliente = new ClienteSocket();
     }
 
-    /**
-     * ✅ CONSULTA COMPLETA DE DISPONIBILIDAD
-     * Obtiene habitaciones disponibles en un período de fechas con información detallada
-     */
     public ResultadoConsultaDisponibilidad consultarDisponibilidad(LocalDate fechaDesde, LocalDate fechaHasta, String codigoHotel) throws IOException {
         try {
-            // ✅ Preparar datos de consulta
             JSONObject consulta = new JSONObject();
             consulta.put("fechaDesde", JsonUtil.fechaToString(fechaDesde));
             consulta.put("fechaHasta", JsonUtil.fechaToString(fechaHasta));
@@ -38,20 +29,16 @@ public class ServicioReservas {
                 consulta.put("codigoHotel", codigoHotel);
             }
 
-            // ✅ Enviar al servidor
             String respuestaJson = cliente.enviarOperacion("CONSULTAR_DISPONIBILIDAD", consulta.toString());
             JSONObject respuesta = new JSONObject(respuestaJson);
 
             if ("OK".equals(respuesta.getString("estado"))) {
-                // ✅ Procesar habitaciones disponibles
                 JSONArray habitacionesJson = respuesta.getJSONArray("habitacionesDisponibles");
                 List<HabitacionDTO> habitaciones = JsonUtil.jsonToHabitaciones(habitacionesJson);
 
-                // ✅ Procesar reservas en período
                 JSONArray reservasJson = respuesta.optJSONArray("reservasEnPeriodo");
                 List<ReservaDTO> reservas = reservasJson != null ? JsonUtil.jsonToReservas(reservasJson) : new ArrayList<>();
 
-                // ✅ Crear resultado
                 return new ResultadoConsultaDisponibilidad(
                         true,
                         "Consulta exitosa",
@@ -72,17 +59,11 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ MÉTODO SOBRECARGADO - Orden de parámetros para JavaFX
-     * Compatible con ConsultaDisponibilidad
-     */
     public List<DisponibilidadDTO> consultarDisponibilidad(String codigoHotel, LocalDate fechaDesde, LocalDate fechaHasta) throws IOException {
         try {
-            // Usar el método principal
             ResultadoConsultaDisponibilidad resultado = consultarDisponibilidad(fechaDesde, fechaHasta, codigoHotel);
 
             if (resultado.isExito()) {
-                // Convertir HabitacionDTO a DisponibilidadDTO
                 List<DisponibilidadDTO> disponibilidad = new ArrayList<>();
 
                 for (HabitacionDTO habitacion : resultado.getHabitacionesDisponibles()) {
@@ -94,7 +75,6 @@ public class ServicioReservas {
                     item.setCantidadImagenes(habitacion.getImagenes().size());
                     item.setEstado(habitacion.getEstado());
 
-                    // Obtener nombre del hotel
                     try {
                         ServicioHoteles servicioHoteles = new ServicioHoteles();
                         String nombreHotel = servicioHoteles.obtenerNombreHotel(habitacion.getCodigoHotel());
@@ -118,10 +98,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ LISTA SIMPLE DE HABITACIONES DISPONIBLES
-     * Más rápido que la consulta completa, solo retorna habitaciones
-     */
     public List<HabitacionDTO> obtenerHabitacionesDisponibles(LocalDate fechaDesde, LocalDate fechaHasta, String codigoHotel) throws IOException {
         try {
             JSONObject consulta = new JSONObject();
@@ -146,9 +122,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ CREAR NUEVA RESERVA - MÉTODO PRINCIPAL CON DEBUG
-     */
     public ResultadoOperacion crearReserva(ReservaDTO reserva) throws IOException {
         System.out.println("\n=== INICIO DEBUG CREAR RESERVA ===");
 
@@ -180,7 +153,7 @@ public class ServicioReservas {
             try {
                 reservaJson = JsonUtil.reservaToJson(reserva);
                 System.out.println("✅ JSON CREADO EXITOSAMENTE:");
-                System.out.println(reservaJson.toString(2)); // Pretty print
+                System.out.println(reservaJson.toString(2));
             } catch (Exception e) {
                 System.out.println("❌ ERROR CREANDO JSON: " + e.getMessage());
                 e.printStackTrace();
@@ -232,14 +205,10 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ CREAR RESERVA SIMPLIFICADA - VERSIÓN CORREGIDA CON DEBUG
-     */
     public ResultadoOperacion crearReserva(String nombreCliente, String codigoHabitacion, LocalDate fechaDesde, LocalDate fechaHasta) throws IOException {
         System.out.println("\n=== CREAR RESERVA SIMPLIFICADA - DEBUG ===");
 
         try {
-            // ✅ GENERAR CÓDIGO DE RESERVA PRIMERO
             String codigoReserva;
             try {
                 codigoReserva = obtenerProximoCodigoReserva();
@@ -249,15 +218,14 @@ public class ServicioReservas {
                 codigoReserva = "RES" + System.currentTimeMillis();
             }
 
-            // ✅ Crear ReservaDTO COMPLETA
             ReservaDTO reserva = new ReservaDTO();
-            reserva.setCodigo(codigoReserva);                    // ✅ CÓDIGO REQUERIDO
+            reserva.setCodigo(codigoReserva);
             reserva.setClienteNombre(nombreCliente);
             reserva.setCodigoHabitacion(codigoHabitacion);
             reserva.setFechaDesde(fechaDesde);
             reserva.setFechaHasta(fechaHasta);
-            reserva.setEstado(ReservaDTO.ESTADO_ACTIVA);     // ✅ USAR CONSTANTE
-            reserva.setFechaCreacion(LocalDate.now());           // ✅ FECHA CREACIÓN
+            reserva.setEstado(ReservaDTO.ESTADO_ACTIVA);
+            reserva.setFechaCreacion(LocalDate.now());
 
             System.out.println("📋 DATOS BÁSICOS CONFIGURADOS:");
             System.out.println("   - Código: " + reserva.getCodigo());
@@ -265,7 +233,6 @@ public class ServicioReservas {
             System.out.println("   - Habitación: " + reserva.getCodigoHabitacion());
             System.out.println("   - Estado: " + reserva.getEstado());
 
-            // ✅ Calcular precio
             try {
                 System.out.println("💰 CALCULANDO PRECIO...");
                 ServicioHabitaciones servicioHabitaciones = new ServicioHabitaciones();
@@ -283,7 +250,6 @@ public class ServicioReservas {
                     double precioTotal = calcularPrecioTotal(habitacionSeleccionada, fechaDesde, fechaHasta);
                     reserva.setPrecioTotal(precioTotal);
 
-                    // ✅ ESTABLECER CÓDIGO DE HOTEL SI ESTÁ DISPONIBLE
                     reserva.setCodigoHotel(habitacionSeleccionada.getCodigoHotel());
 
                     System.out.println("✅ Precio calculado: $" + precioTotal);
@@ -298,7 +264,6 @@ public class ServicioReservas {
                 return new ResultadoOperacion(false, "Error calculando precio: " + e.getMessage());
             }
 
-            // ✅ VALIDAR ANTES DE ENVIAR
             System.out.println("🔍 VALIDANDO RESERVA...");
             boolean esValida = reserva.esValida();
             System.out.println("✅ Validación: " + esValida);
@@ -315,7 +280,6 @@ public class ServicioReservas {
 
             System.out.println("🚀 ENVIANDO RESERVA AL SERVIDOR...");
 
-            // ✅ Usar el método principal de crear reserva
             ResultadoOperacion resultado = crearReserva(reserva);
 
             System.out.println("📊 RESULTADO: " + (resultado.isExito() ? "ÉXITO" : "ERROR"));
@@ -332,9 +296,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ MODIFICAR RESERVA EXISTENTE
-     */
     public ResultadoOperacion modificarReserva(ReservaDTO reserva) throws IOException {
         try {
             if (reserva == null || !reserva.esValida()) {
@@ -355,9 +316,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ ELIMINAR/CANCELAR RESERVA
-     */
     public ResultadoOperacion eliminarReserva(String codigoReserva) throws IOException {
         try {
             if (codigoReserva == null || codigoReserva.trim().isEmpty()) {
@@ -377,9 +335,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ BUSCAR RESERVA POR CÓDIGO
-     */
     public ReservaDTO buscarReserva(String codigoReserva) throws IOException {
         try {
             if (codigoReserva == null || codigoReserva.trim().isEmpty()) {
@@ -401,16 +356,10 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ LISTAR TODAS LAS RESERVAS
-     */
     public List<ReservaDTO> listarReservas() throws IOException {
         return listarReservasPorHotel(null);
     }
 
-    /**
-     * ✅ LISTAR RESERVAS DE UN HOTEL ESPECÍFICO
-     */
     public List<ReservaDTO> listarReservasPorHotel(String codigoHotel) throws IOException {
         try {
             JSONObject filtro = new JSONObject();
@@ -433,9 +382,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * ✅ FINALIZAR RESERVAS VENCIDAS
-     */
     public ResultadoOperacion finalizarReservasVencidas() throws IOException {
         try {
             String respuestaJson = cliente.enviarOperacion("FINALIZAR_RESERVAS_VENCIDAS", "");
@@ -452,11 +398,7 @@ public class ServicioReservas {
         }
     }
 
-    // ✅ =================== CLASES AUXILIARES ===================
 
-    /**
-     * Resultado completo de consulta de disponibilidad
-     */
     public static class ResultadoConsultaDisponibilidad {
         private final boolean exito;
         private final String mensaje;
@@ -497,7 +439,6 @@ public class ServicioReservas {
             this.codigoHotel = codigoHotel;
         }
 
-        // ✅ Getters
         public boolean isExito() { return exito; }
         public String getMensaje() { return mensaje; }
         public List<HabitacionDTO> getHabitacionesDisponibles() { return habitacionesDisponibles; }
@@ -518,9 +459,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * Resultado general de operaciones
-     */
     public static class ResultadoOperacion {
         private final boolean exito;
         private final String mensaje;
@@ -538,26 +476,18 @@ public class ServicioReservas {
             this.reserva = reserva;
         }
 
-        // ✅ Getters
         public boolean isExito() { return exito; }
         public String getMensaje() { return mensaje; }
         public ReservaDTO getReserva() { return reserva; }
         public boolean tieneReserva() { return reserva != null; }
     }
 
-    // ✅ =================== MÉTODOS UTILITARIOS ===================
 
-    /**
-     * Verifica si una habitación está disponible en fechas específicas
-     */
     public boolean verificarDisponibilidadHabitacion(String codigoHabitacion, LocalDate fechaDesde, LocalDate fechaHasta) throws IOException {
         List<HabitacionDTO> disponibles = obtenerHabitacionesDisponibles(fechaDesde, fechaHasta, null);
         return disponibles.stream().anyMatch(h -> h.getCodigo().equals(codigoHabitacion));
     }
 
-    /**
-     * Obtiene el próximo código de reserva disponible
-     */
     public String obtenerProximoCodigoReserva() throws IOException {
         try {
             List<ReservaDTO> reservas = listarReservas();
@@ -571,7 +501,6 @@ public class ServicioReservas {
                         maxNumero = Math.max(maxNumero, numero);
                     }
                 } catch (NumberFormatException e) {
-                    // Ignorar códigos que no sigan el formato
                 }
             }
 
@@ -582,9 +511,6 @@ public class ServicioReservas {
         }
     }
 
-    /**
-     * Valida fechas de reserva
-     */
     public static boolean validarFechasReserva(LocalDate fechaDesde, LocalDate fechaHasta) {
         if (fechaDesde == null || fechaHasta == null) {
             return false;
@@ -594,9 +520,6 @@ public class ServicioReservas {
         return !fechaDesde.isBefore(hoy) && !fechaDesde.isAfter(fechaHasta);
     }
 
-    /**
-     * Calcula precio total de reserva
-     */
     public static double calcularPrecioTotal(HabitacionDTO habitacion, LocalDate fechaDesde, LocalDate fechaHasta) {
         if (habitacion == null || fechaDesde == null || fechaHasta == null) {
             return 0.0;

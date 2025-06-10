@@ -12,7 +12,6 @@ public class HabitacionesData {
     public static synchronized String guardar(String estilo, double precio, String codigoHotel) {
         List<HabitacionDTO> habitaciones = listar();
 
-        // ✅ CORREGIDO: Validar duplicados SOLO dentro del mismo hotel
         for (HabitacionDTO h : habitaciones) {
             if (h.getCodigoHotel().equals(codigoHotel)
                     && h.getEstilo().equalsIgnoreCase(estilo)
@@ -21,16 +20,13 @@ public class HabitacionesData {
             }
         }
 
-        // ✅ CORREGIDO: Generar código específico por hotel
         String codigo = generarCodigoHabitacion(habitaciones, codigoHotel);
 
-        // ✅ CORREGIDO: Constructor completo con codigoHotel
         habitaciones.add(new HabitacionDTO(codigo, estilo, precio, codigoHotel));
         sobrescribirArchivo(habitaciones);
         return codigo;
     }
 
-    // ✅ NUEVO: Generar código específico por hotel
     private static String generarCodigoHabitacion(List<HabitacionDTO> habitaciones, String codigoHotel) {
         int maxNumero = 0;
         String prefijo = codigoHotel.replace("H-", "R") + "-";  // H-001 → R001-

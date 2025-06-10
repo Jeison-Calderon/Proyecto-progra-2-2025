@@ -8,35 +8,29 @@ import java.util.Objects;
 public class ReservaDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    // ✅ CAMPOS PRINCIPALES
     private String codigo;
     private String codigoHabitacion;
     private LocalDate fechaDesde;
     private LocalDate fechaHasta;
-    private String estado;          // activa, cancelada, finalizada
+    private String estado;
 
-    // ✅ CAMPOS ADICIONALES ÚTILES
-    private String codigoHotel;     // Para filtros rápidos
-    private String clienteNombre;   // Información del cliente (opcional)
-    private double precioTotal;     // Precio calculado de la reserva
-    private LocalDate fechaCreacion; // Cuándo se hizo la reserva
+    private String codigoHotel;
+    private String clienteNombre;
+    private double precioTotal;
+    private LocalDate fechaCreacion;
 
-    // ✅ CONSTANTES DE ESTADO
     public static final String ESTADO_ACTIVA = "activa";
     public static final String ESTADO_CANCELADA = "cancelada";
     public static final String ESTADO_FINALIZADA = "finalizada";
 
-    // ✅ FORMATTER PARA FECHAS
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    // ✅ CONSTRUCTOR VACÍO
     public ReservaDTO() {
         this.fechaCreacion = LocalDate.now();
         this.estado = ESTADO_ACTIVA;
         this.precioTotal = 0.0;
     }
 
-    // ✅ CONSTRUCTOR BÁSICO
     public ReservaDTO(String codigo, String codigoHabitacion, LocalDate fechaDesde, LocalDate fechaHasta) {
         this();
         this.codigo = codigo;
@@ -45,7 +39,6 @@ public class ReservaDTO implements Serializable {
         this.fechaHasta = fechaHasta;
     }
 
-    // ✅ CONSTRUCTOR COMPLETO
     public ReservaDTO(String codigo, String codigoHabitacion, String codigoHotel,
                       LocalDate fechaDesde, LocalDate fechaHasta, String estado,
                       String clienteNombre, double precioTotal) {
@@ -60,7 +53,6 @@ public class ReservaDTO implements Serializable {
         this.fechaCreacion = LocalDate.now();
     }
 
-    // ✅ GETTERS Y SETTERS
     public String getCodigo() { return codigo; }
     public void setCodigo(String codigo) { this.codigo = codigo; }
 
@@ -88,7 +80,6 @@ public class ReservaDTO implements Serializable {
     public LocalDate getFechaCreacion() { return fechaCreacion; }
     public void setFechaCreacion(LocalDate fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 
-    // ✅ MÉTODOS AUXILIARES DE ESTADO
     public boolean estaActiva() {
         return ESTADO_ACTIVA.equalsIgnoreCase(this.estado);
     }
@@ -113,7 +104,6 @@ public class ReservaDTO implements Serializable {
         this.estado = ESTADO_FINALIZADA;
     }
 
-    // ✅ MÉTODOS DE FECHAS
     public long getDuracionDias() {
         if (fechaDesde == null || fechaHasta == null) return 0;
         return fechaDesde.until(fechaHasta).getDays();
@@ -136,7 +126,6 @@ public class ReservaDTO implements Serializable {
                 !fechaDesde.isAfter(fechaHasta);
     }
 
-    // ✅ MÉTODOS DE CONVERSIÓN DE FECHAS (para JSON)
     public String getFechaDesdeString() {
         return fechaDesde != null ? fechaDesde.format(FORMATTER) : "";
     }
@@ -165,7 +154,6 @@ public class ReservaDTO implements Serializable {
         }
     }
 
-    // ✅ EQUALS Y HASHCODE
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -179,7 +167,6 @@ public class ReservaDTO implements Serializable {
         return Objects.hash(codigo);
     }
 
-    // ✅ TOSTRING
     @Override
     public String toString() {
         return "ReservaDTO{" +
@@ -194,7 +181,6 @@ public class ReservaDTO implements Serializable {
                 '}';
     }
 
-    // ✅ MÉTODO PARA INFORMACIÓN COMPLETA
     public String toStringCompleto() {
         return "ReservaDTO{" +
                 "codigo='" + codigo + '\'' +

@@ -1,8 +1,5 @@
 package aplicacion.dto;
 
-/**
- * DTO para representar la disponibilidad de una habitación
- */
 public class DisponibilidadDTO {
 
     private String codigoHabitacion;
@@ -14,10 +11,8 @@ public class DisponibilidadDTO {
     private int cantidadImagenes;
     private String estado;
 
-    // Constructor vacío
     public DisponibilidadDTO() {}
 
-    // Constructor completo
     public DisponibilidadDTO(String codigoHabitacion, String numeroHabitacion, String estilo,
                              double precio, String nombreHotel, String codigoHotel,
                              int cantidadImagenes, String estado) {
@@ -31,7 +26,6 @@ public class DisponibilidadDTO {
         this.estado = estado;
     }
 
-    // Getters y Setters
     public String getCodigoHabitacion() {
         return codigoHabitacion;
     }

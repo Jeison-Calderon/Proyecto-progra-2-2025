@@ -25,16 +25,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Clase JavaFX para gestión completa de reservas
- */
 public class GestionReservas {
 
-    // Servicios
     private ServicioReservas servicioReservas;
     private ServicioHoteles servicioHoteles;
 
-    // Componentes de filtros
     private ComboBox<HotelItem> comboHotel;
     private ComboBox<String> comboEstado;
     private TextField txtCliente;
@@ -491,10 +486,7 @@ public class GestionReservas {
         if (hotelSeleccionado == null || hotelSeleccionado.getCodigo() == null) {
             return true;
         }
-
-        // Aquí necesitarías obtener el código del hotel de la habitación
-        // Por simplicidad, asumimos que la reserva tiene esa información
-        return true; // TODO: Implementar correctamente cuando tengas la relación habitación-hotel
+        return true;
     }
 
     private boolean aplicarFiltroEstado(ReservaDTO reserva) {
@@ -610,7 +602,7 @@ public class GestionReservas {
                     ResultadoOperacion resultado = getValue();
                     if (resultado.isExito()) {
                         mostrarInformacion("Reserva eliminada exitosamente");
-                        cargarReservas(); // Recargar datos
+                        cargarReservas();
                     } else {
                         mostrarError("Error eliminando reserva: " + resultado.getMensaje());
                     }
@@ -691,7 +683,6 @@ public class GestionReservas {
             VBox contenido = new VBox(15);
             contenido.setPadding(new Insets(20));
 
-            // Título
             Label titulo = new Label("Información Completa de la Reserva");
             titulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
 
@@ -808,7 +799,6 @@ public class GestionReservas {
             comboEstado.setValue(reserva.getEstado());
             grid.add(comboEstado, 1, 4);
 
-            // Botones
             HBox botones = new HBox(10);
             botones.setAlignment(Pos.CENTER);
 

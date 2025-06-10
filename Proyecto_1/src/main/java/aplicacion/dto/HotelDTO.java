@@ -2,26 +2,20 @@ package aplicacion.dto;
 
 import java.io.Serializable;
 
-/**
- * Clase DTO que representa los datos de un Hotel
- */
 public class HotelDTO implements Serializable {
     private String codigo;
     private String nombre;
     private String ubicacion;
 
-    // Constructor vacío
     public HotelDTO() {
     }
 
-    // Constructor con parámetros
     public HotelDTO(String codigo, String nombre, String ubicacion) {
         this.codigo = codigo;
         this.nombre = nombre;
         this.ubicacion = ubicacion;
     }
 
-    // Getters y setters
     public String getCodigo() {
         return codigo;
     }

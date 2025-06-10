@@ -10,7 +10,6 @@ import java.util.Optional;
 
 public class VistaFormularios {
 
-    // ✅ FORMULARIO PARA NUEVO HOTEL
     public static Optional<HotelDTO> mostrarFormularioNuevoHotel() {
         Dialog<HotelDTO> dialog = new Dialog<>();
         dialog.setTitle("Crear Nuevo Hotel");
@@ -49,7 +48,6 @@ public class VistaFormularios {
         return dialog.showAndWait();
     }
 
-    // ✅ FORMULARIO PARA NUEVA HABITACIÓN
     public static Optional<HabitacionDTO> mostrarFormularioNuevaHabitacion(HotelDTO hotel) {
         Dialog<HabitacionDTO> dialog = new Dialog<>();
         dialog.setTitle("Crear Nueva Habitación");
@@ -93,7 +91,6 @@ public class VistaFormularios {
         return dialog.showAndWait();
     }
 
-    // ✅ FORMULARIO PARA EDITAR HOTEL
     public static Optional<HotelDTO> mostrarFormularioEditarHotel(HotelDTO hotel) {
         Dialog<HotelDTO> dialog = new Dialog<>();
         dialog.setTitle("Editar Hotel");
@@ -134,7 +131,6 @@ public class VistaFormularios {
         return dialog.showAndWait();
     }
 
-    // ✅ FORMULARIO PARA EDITAR HABITACIÓN
     public static Optional<HabitacionDTO> mostrarFormularioEditarHabitacion(HabitacionDTO habitacion) {
         Dialog<HabitacionDTO> dialog = new Dialog<>();
         dialog.setTitle("Editar Habitación");
@@ -180,7 +176,6 @@ public class VistaFormularios {
         return dialog.showAndWait();
     }
 
-    // ✅ CONFIRMACIÓN DE ELIMINACIÓN
     public static boolean confirmarEliminacion(String titulo, String mensaje) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmar eliminar");
@@ -191,7 +186,6 @@ public class VistaFormularios {
         return result.isPresent() && result.get() == ButtonType.OK;
     }
 
-    // ✅ MOSTRAR ERROR
     public static void mostrarError(String mensaje) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");

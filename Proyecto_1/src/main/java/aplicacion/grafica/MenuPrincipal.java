@@ -30,33 +30,44 @@ public class MenuPrincipal {
     public MenuPrincipal() {
         this.servicioHoteles = new ServicioHoteles();
         this.servicioHabitaciones = new ServicioHabitaciones();
-        inicializarGestores();
-    }
-
-    private void inicializarGestores() {
-        txtResultado = new TextArea();
-        notificacionManager = new NotificacionManager(txtResultado);
-        tabManager = new TabManager(tabPane);
-        gestorHoteles = new GestorHoteles(servicioHoteles, notificacionManager, tabManager);
-        gestorHabitaciones = new GestorHabitaciones(servicioHabitaciones, notificacionManager, tabManager);
-        consultaDisponibilidad = new ConsultaDisponibilidad();
-        gestionReservas = new GestionReservas();
-        gestorHoteles.setOnVerHabitaciones(this::verHabitacionesHotel);
+        // NO inicializar gestores aquí - esperar a que tabPane esté creado
     }
 
     public BorderPane getVista() {
         root = new BorderPane();
+
+        // Crear TabPane PRIMERO
         tabPane = new TabPane();
-        tabManager = new TabManager(tabPane);
-        gestorHoteles = new GestorHoteles(servicioHoteles, notificacionManager, tabManager);
-        gestorHabitaciones = new GestorHabitaciones(servicioHabitaciones, notificacionManager, tabManager);
-        gestorHoteles.setOnVerHabitaciones(this::verHabitacionesHotel);
+
+        // AHORA inicializar todos los gestores una sola vez
+        inicializarGestores();
+
+        // Crear pestañas principales
         crearPestanasPrincipales();
+
         root.setCenter(tabPane);
         BorderPane header = crearHeader();
         root.setTop(header);
         root.setBottom(txtResultado);
         return root;
+    }
+
+    private void inicializarGestores() {
+        txtResultado = new TextArea();
+        txtResultado.setEditable(false);
+        txtResultado.setPrefHeight(100);
+
+        notificacionManager = new NotificacionManager(txtResultado);
+        tabManager = new TabManager(tabPane);
+
+        gestorHoteles = new GestorHoteles(servicioHoteles, notificacionManager, tabManager);
+        gestorHabitaciones = new GestorHabitaciones(servicioHabitaciones, notificacionManager, tabManager);
+
+        consultaDisponibilidad = new ConsultaDisponibilidad();
+        gestionReservas = new GestionReservas();
+
+        // Configurar callback DESPUÉS de crear los gestores
+        gestorHoteles.setOnVerHabitaciones(this::verHabitacionesHotel);
     }
 
     private void crearPestanasPrincipales() {
@@ -98,13 +109,16 @@ public class MenuPrincipal {
         btnHoteles.setStyle(estiloBotonNavegacion());
         btnHoteles.setOnAction(e -> {
             System.out.println("Navegando a Hoteles - Índice 0");
-            tabPane.getSelectionModel().select(0);
+            // Cerrar pestañas temporales y volver a principal
+            tabManager.volverAPrincipal();
         });
 
         Button btnDisponibilidad = new Button("Disponibilidad");
         btnDisponibilidad.setStyle(estiloBotonNavegacion());
         btnDisponibilidad.setOnAction(e -> {
             System.out.println("Navegando a Disponibilidad - Índice 1");
+            // Cerrar pestañas temporales primero
+            tabManager.cerrarPestanasTemporales();
             tabPane.getSelectionModel().select(1);
         });
 
@@ -112,6 +126,8 @@ public class MenuPrincipal {
         btnReservas.setStyle(estiloBotonNavegacion());
         btnReservas.setOnAction(e -> {
             System.out.println("Navegando a Reservas - Índice 2");
+            // Cerrar pestañas temporales primero
+            tabManager.cerrarPestanasTemporales();
             tabPane.getSelectionModel().select(2);
         });
 
@@ -181,15 +197,17 @@ public class MenuPrincipal {
     }
 
     public void irAConsultaDisponibilidad() {
+        tabManager.cerrarPestanasTemporales();
         tabPane.getSelectionModel().select(1);
     }
 
     public void irAGestionReservas() {
+        tabManager.cerrarPestanasTemporales();
         tabPane.getSelectionModel().select(2);
     }
 
     public void irAGestionHoteles() {
-        tabPane.getSelectionModel().select(0);
+        tabManager.volverAPrincipal();
     }
 
     public ConsultaDisponibilidad getConsultaDisponibilidad() {

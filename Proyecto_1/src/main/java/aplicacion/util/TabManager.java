@@ -4,7 +4,6 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 
 public class TabManager {
-
     private TabPane tabPane;
 
     public TabManager(TabPane tabPane) {
@@ -23,10 +22,11 @@ public class TabManager {
     }
 
     public void cerrarPestanasTemporales() {
-        while (tabPane.getTabs().size() > 1) {
-            tabPane.getTabs().remove(1);
+        // Mantener solo las primeras 3 pestañas principales
+        while (tabPane.getTabs().size() > 3) {
+            tabPane.getTabs().remove(3);
         }
-        tabPane.getSelectionModel().selectFirst();
+        // No seleccionar automáticamente
     }
 
     public Tab buscarPestanaPorTitulo(String prefijo) {
@@ -48,6 +48,7 @@ public class TabManager {
     }
 
     public void volverAPrincipal() {
+        cerrarPestanasTemporales();
         tabPane.getSelectionModel().selectFirst();
     }
 

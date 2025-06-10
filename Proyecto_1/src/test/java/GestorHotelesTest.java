@@ -24,15 +24,14 @@ public class GestorHotelesTest {
     @BeforeAll
     public static void initToolkit() {
         try {
-            Platform.startup(() -> {}); // ✅ reemplaza a new JFXPanel()
+            Platform.startup(() -> {});
         } catch (IllegalStateException e) {
-            // JavaFX ya fue inicializado, no hacer nada
+            // JavaFX ya fue inicializado
         }
     }
 
     @BeforeEach
     public void setUp() {
-        // Crear objetos JavaFX mínimos para los managers
         TextArea dummyTextArea = new TextArea();
         TabPane dummyTabPane = new TabPane();
 

@@ -5,7 +5,7 @@ import java.io.*;
 import java.net.Socket;
 
 public class ClienteSocket {
-    private static final String SERVIDOR_IP = "10.59.18.225";
+    private static final String SERVIDOR_IP = "192.168.10.21";
     private static final int SERVIDOR_PUERTO = 5001;
 
     public String enviarOperacion(String operacion) throws IOException {

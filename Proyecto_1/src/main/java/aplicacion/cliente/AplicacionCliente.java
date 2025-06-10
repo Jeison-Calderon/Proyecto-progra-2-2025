@@ -1,5 +1,6 @@
 package aplicacion.cliente;
 
+import aplicacion.grafica.LoginView;
 import aplicacion.grafica.MenuPrincipal;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -16,27 +17,29 @@ public class AplicacionCliente extends Application {
             ClienteSocket cliente = new ClienteSocket();
             cliente.enviarOperacion("LISTAR_HOTELES");
 
-            // Si llegamos aquí, el servidor está disponible
-            BorderPane root = new BorderPane();
-            MenuPrincipal menu = new MenuPrincipal();
-            BorderPane menuVista = menu.getVista();
+            // Mostrar login primero
+            LoginView loginView = new LoginView();
+            loginView.mostrar(primaryStage, (usuario) -> {
+                // Si login fue exitoso, cargar la aplicación principal
+                BorderPane root = new BorderPane();
+                MenuPrincipal menu = new MenuPrincipal();
+                BorderPane menuVista = menu.getVista();
 
-            root.setCenter(menuVista.getCenter());
-            root.setTop(menuVista.getTop());
-            root.setBottom(menuVista.getBottom());
+                root.setCenter(menuVista.getCenter());
+                root.setTop(menuVista.getTop());
+                root.setBottom(menuVista.getBottom());
 
-            Scene scene = new Scene(root, 900, 600);
+                Scene scene = new Scene(root, 900, 600);
+                try {
+                    scene.getStylesheets().add(getClass().getResource("/estilos.css").toExternalForm());
+                } catch (Exception e) {
+                    System.out.println("No se pudo cargar estilos.css");
+                }
 
-            // Cargar CSS si existe
-            try {
-                scene.getStylesheets().add(getClass().getResource("/estilos.css").toExternalForm());
-            } catch (Exception e) {
-                System.out.println("No se pudo cargar estilos.css");
-            }
-
-            primaryStage.setTitle("Sistema de Gestión de Hoteles - Cliente");
-            primaryStage.setScene(scene);
-            primaryStage.show();
+                primaryStage.setScene(scene);
+                primaryStage.setTitle("Sistema de Gestión de Hoteles - Cliente");
+                primaryStage.show();
+            });
 
         } catch (Exception e) {
             // Error de conexión

@@ -16,11 +16,6 @@ import javafx.stage.Stage;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * ✅ NUEVA CLASE: Interfaz dedicada para crear reservas desde cero
- * Incluye todos los campos requeridos: número, cliente, fechas, recepcionista, habitación
- * Con validaciones completas y retroalimentación al usuario
- */
 public class NuevaReserva extends Stage {
 
     private final ServicioReservas servicioReservas;

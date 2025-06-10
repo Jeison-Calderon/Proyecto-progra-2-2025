@@ -3,9 +3,11 @@ package aplicacion.servidor;
 import aplicacion.data.HabitacionesData;
 import aplicacion.data.HotelesData;
 import aplicacion.data.ReservasData;
+import aplicacion.data.UsuarioDAO;
 import aplicacion.dto.HabitacionDTO;
 import aplicacion.dto.HotelDTO;
 import aplicacion.dto.ReservaDTO;
+import aplicacion.dto.Usuario;
 import aplicacion.util.JsonUtil;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -13,6 +15,8 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.Socket;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,9 +33,15 @@ public class ServidorHilos extends Thread {
              DataOutputStream salida = new DataOutputStream(cliente.getOutputStream())) {
 
             String operacion = entrada.readUTF();
-            System.out.println("📡 Operación recibida: " + operacion);
+            System.out.println("📡 " + LocalDateTime.now() + " - Operación recibida: " + operacion);
 
             switch (operacion) {
+                case "LOGIN":
+                    manejarLogin(entrada, salida);
+                    break;
+                case "REGISTRAR_USUARIO":
+                    manejarRegistroUsuario(entrada, salida);
+                    break;
                 case "LISTAR_HOTELES":
                     manejarListarHoteles(salida);
                     break;
@@ -44,7 +54,6 @@ public class ServidorHilos extends Thread {
                 case "MODIFICAR_HOTEL":
                     manejarModificarHotel(entrada, salida);
                     break;
-
                 case "LISTAR_HABITACIONES":
                     manejarListarHabitaciones(salida);
                     break;
@@ -57,7 +66,6 @@ public class ServidorHilos extends Thread {
                 case "MODIFICAR_HABITACION":
                     manejarModificarHabitacion(entrada, salida);
                     break;
-
                 case "CONSULTAR_DISPONIBILIDAD":
                     manejarConsultarDisponibilidad(entrada, salida);
                     break;
@@ -82,25 +90,108 @@ public class ServidorHilos extends Thread {
                 case "FINALIZAR_RESERVAS_VENCIDAS":
                     manejarFinalizarReservasVencidas(salida);
                     break;
-
                 case "ENVIAR_ARCHIVO":
                     manejarEnviarArchivo(entrada, salida);
                     break;
-
                 default:
                     enviarError(salida, "Operación no reconocida: " + operacion);
                     break;
             }
 
         } catch (IOException e) {
-            System.err.println("❌ Error manejando cliente: " + e.getMessage());
+            System.err.println("❌ " + LocalDateTime.now() + " - Error manejando cliente: " + e.getMessage());
         } finally {
             try {
                 cliente.close();
-                System.out.println("📱 Cliente desconectado");
+                System.out.println("📱 " + LocalDateTime.now() + " - Cliente desconectado");
             } catch (IOException e) {
-                System.err.println("❌ Error cerrando conexión: " + e.getMessage());
+                System.err.println("❌ " + LocalDateTime.now() + " - Error cerrando conexión: " + e.getMessage());
             }
+        }
+    }
+
+    private void manejarLogin(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String loginJson = entrada.readUTF();
+            JSONObject datos = new JSONObject(loginJson);
+
+            String usuario = datos.getString("usuario");
+            String contrasena = datos.getString("contrasena");
+
+            Usuario usuarioEncontrado = UsuarioDAO.buscarPorCredenciales(usuario, contrasena);
+
+            JSONObject respuesta = new JSONObject();
+            if (usuarioEncontrado != null) {
+                respuesta.put("estado", "OK");
+                respuesta.put("mensaje", "Login exitoso");
+                System.out.println("✅ " + LocalDateTime.now() + " - Usuario autenticado: " + usuario);
+            } else {
+                respuesta.put("estado", "ERROR");
+                respuesta.put("mensaje", "Usuario o contraseña incorrectos");
+                System.out.println("❌ " + LocalDateTime.now() + " - Intento de login fallido para usuario: " + usuario);
+            }
+
+            salida.writeUTF(respuesta.toString());
+
+        } catch (Exception e) {
+            enviarError(salida, "Error en el login: " + e.getMessage());
+        }
+    }
+
+    private void manejarRegistroUsuario(DataInputStream entrada, DataOutputStream salida) throws IOException {
+        try {
+            String datosJson = entrada.readUTF();
+            JSONObject datos = new JSONObject(datosJson);
+
+            String usuario = datos.getString("usuario");
+            String contrasena = datos.getString("contrasena");
+            String confirmarContrasena = datos.getString("confirmarContrasena");
+
+            // Validaciones
+            if (usuario.isEmpty() || contrasena.isEmpty()) {
+                enviarError(salida, "El usuario y la contraseña son requeridos");
+                return;
+            }
+
+            if (!contrasena.equals(confirmarContrasena)) {
+                enviarError(salida, "Las contraseñas no coinciden");
+                return;
+            }
+
+            if (usuario.length() < 4) {
+                enviarError(salida, "El nombre de usuario debe tener al menos 4 caracteres");
+                return;
+            }
+
+            if (contrasena.length() < 6) {
+                enviarError(salida, "La contraseña debe tener al menos 6 caracteres");
+                return;
+            }
+
+            // Verificar usuario existente
+            ArrayList<Usuario> usuarios = UsuarioDAO.cargarUsuarios();
+            boolean usuarioExistente = usuarios.stream()
+                    .anyMatch(u -> u.getUsername().equals(usuario));
+
+            if (usuarioExistente) {
+                enviarError(salida, "El nombre de usuario ya existe");
+                return;
+            }
+
+            // Crear y guardar nuevo usuario
+            Usuario nuevoUsuario = new Usuario(usuario, contrasena);
+            usuarios.add(nuevoUsuario);
+            UsuarioDAO.guardarUsuarios(usuarios);
+
+            JSONObject respuesta = new JSONObject();
+            respuesta.put("estado", "OK");
+            respuesta.put("mensaje", "Usuario registrado correctamente");
+            salida.writeUTF(respuesta.toString());
+
+            System.out.println("✅ " + LocalDateTime.now() + " - Nuevo usuario registrado: " + usuario);
+
+        } catch (Exception e) {
+            enviarError(salida, "Error al registrar usuario: " + e.getMessage());
         }
     }
 
@@ -551,6 +642,6 @@ public class ServidorHilos extends Thread {
     private void enviarError(DataOutputStream salida, String mensaje) throws IOException {
         JSONObject respuesta = JsonUtil.crearRespuestaError(mensaje);
         salida.writeUTF(respuesta.toString());
-        System.err.println("Error enviado al cliente: " + mensaje);
+        System.err.println("❌ " + LocalDateTime.now() + " - Error enviado al cliente: " + mensaje);
     }
 }

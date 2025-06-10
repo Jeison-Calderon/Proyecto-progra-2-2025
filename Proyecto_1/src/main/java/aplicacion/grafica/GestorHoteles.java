@@ -157,7 +157,7 @@ public class GestorHoteles {
         new Thread(task).start();
     }
 
-    private void buscarHoteles(String query) {
+    public void buscarHoteles(String query) {
         String queryLower = query.trim().toLowerCase();
         if (queryLower.isEmpty()) {
             tablaHoteles.setItems(hotelesOriginales);

@@ -122,6 +122,140 @@ public class ServicioReservas {
         }
     }
 
+    // ✅ NUEVO MÉTODO: Crear reserva completa con todos los campos requeridos
+    public ResultadoOperacion crearReservaCompleta(String nombreCliente, String recepcionista,
+                                                   String codigoHabitacion, LocalDate fechaDesde,
+                                                   LocalDate fechaHasta) throws IOException {
+        System.out.println("\n=== CREAR RESERVA COMPLETA - DEBUG ===");
+
+        try {
+            // Validaciones previas
+            if (nombreCliente == null || nombreCliente.trim().isEmpty()) {
+                return new ResultadoOperacion(false, "El nombre del cliente es requerido");
+            }
+
+            if (recepcionista == null || recepcionista.trim().isEmpty()) {
+                return new ResultadoOperacion(false, "El nombre del recepcionista es requerido");
+            }
+
+            if (codigoHabitacion == null || codigoHabitacion.trim().isEmpty()) {
+                return new ResultadoOperacion(false, "El código de habitación es requerido");
+            }
+
+            if (fechaDesde == null || fechaHasta == null) {
+                return new ResultadoOperacion(false, "Las fechas son requeridas");
+            }
+
+            if (fechaDesde.isBefore(LocalDate.now())) {
+                return new ResultadoOperacion(false, "La fecha de inicio no puede ser anterior a hoy");
+            }
+
+            if (!fechaDesde.isBefore(fechaHasta)) {
+                return new ResultadoOperacion(false, "La fecha de fin debe ser posterior a la fecha de inicio");
+            }
+
+            // Generar código de reserva
+            String codigoReserva;
+            try {
+                codigoReserva = obtenerProximoCodigoReserva();
+                System.out.println("✅ Código generado: " + codigoReserva);
+            } catch (Exception e) {
+                System.out.println("❌ Error generando código, usando fallback");
+                codigoReserva = "RES" + System.currentTimeMillis();
+            }
+
+            // Crear reserva con todos los campos
+            ReservaDTO reserva = new ReservaDTO();
+            reserva.setCodigo(codigoReserva);
+            reserva.setClienteNombre(nombreCliente.trim());
+            reserva.setRecepcionista(recepcionista.trim());  // ✅ NUEVO: Campo recepcionista
+            reserva.setCodigoHabitacion(codigoHabitacion);
+            reserva.setFechaDesde(fechaDesde);
+            reserva.setFechaHasta(fechaHasta);
+            reserva.setEstado(ReservaDTO.ESTADO_ACTIVA);
+            reserva.setFechaCreacion(LocalDate.now());
+
+            System.out.println("📋 DATOS COMPLETOS CONFIGURADOS:");
+            System.out.println("   - Código: " + reserva.getCodigo());
+            System.out.println("   - Cliente: " + reserva.getClienteNombre());
+            System.out.println("   - Recepcionista: " + reserva.getRecepcionista());  // ✅ NUEVO
+            System.out.println("   - Habitación: " + reserva.getCodigoHabitacion());
+            System.out.println("   - Estado: " + reserva.getEstado());
+
+            // Obtener información de la habitación y calcular precio
+            try {
+                System.out.println("💰 CALCULANDO PRECIO...");
+                ServicioHabitaciones servicioHabitaciones = new ServicioHabitaciones();
+                List<HabitacionDTO> todasHabitaciones = servicioHabitaciones.listarHabitaciones();
+
+                HabitacionDTO habitacionSeleccionada = null;
+                for (HabitacionDTO hab : todasHabitaciones) {
+                    if (hab.getCodigo().equals(codigoHabitacion)) {
+                        habitacionSeleccionada = hab;
+                        break;
+                    }
+                }
+
+                if (habitacionSeleccionada != null) {
+                    double precioTotal = calcularPrecioTotal(habitacionSeleccionada, fechaDesde, fechaHasta);
+                    reserva.setPrecioTotal(precioTotal);
+                    reserva.setCodigoHotel(habitacionSeleccionada.getCodigoHotel());
+
+                    System.out.println("✅ Precio calculado: $" + precioTotal);
+                    System.out.println("✅ Hotel: " + habitacionSeleccionada.getCodigoHotel());
+                } else {
+                    System.out.println("❌ Habitación no encontrada: " + codigoHabitacion);
+                    return new ResultadoOperacion(false, "Habitación no encontrada: " + codigoHabitacion);
+                }
+
+            } catch (Exception e) {
+                System.out.println("❌ Error calculando precio: " + e.getMessage());
+                return new ResultadoOperacion(false, "Error calculando precio: " + e.getMessage());
+            }
+
+            // Validar reserva completa
+            System.out.println("🔍 VALIDANDO RESERVA COMPLETA...");
+            boolean esValida = reserva.esValida();
+            System.out.println("✅ Validación: " + esValida);
+
+            if (!esValida) {
+                System.out.println("❌ RESERVA INVÁLIDA - DETALLES:");
+                System.out.println("   - Código: '" + reserva.getCodigo() + "' (vacío: " + (reserva.getCodigo() == null || reserva.getCodigo().trim().isEmpty()) + ")");
+                System.out.println("   - Cliente: '" + reserva.getClienteNombre() + "' (vacío: " + (reserva.getClienteNombre() == null || reserva.getClienteNombre().trim().isEmpty()) + ")");
+                System.out.println("   - Recepcionista: '" + reserva.getRecepcionista() + "' (vacío: " + (reserva.getRecepcionista() == null || reserva.getRecepcionista().trim().isEmpty()) + ")");  // ✅ NUEVO
+                System.out.println("   - Habitación: '" + reserva.getCodigoHabitacion() + "' (vacío: " + (reserva.getCodigoHabitacion() == null || reserva.getCodigoHabitacion().trim().isEmpty()) + ")");
+                System.out.println("   - Fecha desde: " + reserva.getFechaDesde());
+                System.out.println("   - Fecha hasta: " + reserva.getFechaHasta());
+                System.out.println("   - Estado: '" + reserva.getEstado() + "'");
+                return new ResultadoOperacion(false, "Datos de reserva inválidos después de configurar");
+            }
+
+            // Verificar disponibilidad antes de crear
+            System.out.println("🔍 VERIFICANDO DISPONIBILIDAD...");
+            boolean disponible = verificarDisponibilidadHabitacion(codigoHabitacion, fechaDesde, fechaHasta);
+            if (!disponible) {
+                return new ResultadoOperacion(false, "La habitación no está disponible en las fechas seleccionadas");
+            }
+            System.out.println("✅ Habitación disponible");
+
+            // Enviar al servidor
+            System.out.println("🚀 ENVIANDO RESERVA COMPLETA AL SERVIDOR...");
+            ResultadoOperacion resultado = crearReserva(reserva);
+
+            System.out.println("📊 RESULTADO: " + (resultado.isExito() ? "ÉXITO" : "ERROR"));
+            System.out.println("📝 MENSAJE: " + resultado.getMensaje());
+
+            return resultado;
+
+        } catch (Exception e) {
+            System.out.println("💥 EXCEPCIÓN: " + e.getMessage());
+            e.printStackTrace();
+            throw new IOException("Error creando reserva completa: " + e.getMessage(), e);
+        } finally {
+            System.out.println("=== FIN CREAR RESERVA COMPLETA ===\n");
+        }
+    }
+
     public ResultadoOperacion crearReserva(ReservaDTO reserva) throws IOException {
         System.out.println("\n=== INICIO DEBUG CREAR RESERVA ===");
 
@@ -134,6 +268,7 @@ public class ServicioReservas {
             System.out.println("📋 RESERVA RECIBIDA:");
             System.out.println("   - Código: " + reserva.getCodigo());
             System.out.println("   - Cliente: " + reserva.getClienteNombre());
+            System.out.println("   - Recepcionista: " + reserva.getRecepcionista());  // ✅ NUEVO: Log del recepcionista
             System.out.println("   - Habitación: " + reserva.getCodigoHabitacion());
             System.out.println("   - Desde: " + reserva.getFechaDesde());
             System.out.println("   - Hasta: " + reserva.getFechaHasta());
@@ -205,95 +340,10 @@ public class ServicioReservas {
         }
     }
 
+    // ✅ ACTUALIZADO: Método simplificado actualizado para mantener retrocompatibilidad
     public ResultadoOperacion crearReserva(String nombreCliente, String codigoHabitacion, LocalDate fechaDesde, LocalDate fechaHasta) throws IOException {
-        System.out.println("\n=== CREAR RESERVA SIMPLIFICADA - DEBUG ===");
-
-        try {
-            String codigoReserva;
-            try {
-                codigoReserva = obtenerProximoCodigoReserva();
-                System.out.println("✅ Código generado: " + codigoReserva);
-            } catch (Exception e) {
-                System.out.println("❌ Error generando código, usando fallback");
-                codigoReserva = "RES" + System.currentTimeMillis();
-            }
-
-            ReservaDTO reserva = new ReservaDTO();
-            reserva.setCodigo(codigoReserva);
-            reserva.setClienteNombre(nombreCliente);
-            reserva.setCodigoHabitacion(codigoHabitacion);
-            reserva.setFechaDesde(fechaDesde);
-            reserva.setFechaHasta(fechaHasta);
-            reserva.setEstado(ReservaDTO.ESTADO_ACTIVA);
-            reserva.setFechaCreacion(LocalDate.now());
-
-            System.out.println("📋 DATOS BÁSICOS CONFIGURADOS:");
-            System.out.println("   - Código: " + reserva.getCodigo());
-            System.out.println("   - Cliente: " + reserva.getClienteNombre());
-            System.out.println("   - Habitación: " + reserva.getCodigoHabitacion());
-            System.out.println("   - Estado: " + reserva.getEstado());
-
-            try {
-                System.out.println("💰 CALCULANDO PRECIO...");
-                ServicioHabitaciones servicioHabitaciones = new ServicioHabitaciones();
-                List<HabitacionDTO> todasHabitaciones = servicioHabitaciones.listarHabitaciones();
-
-                HabitacionDTO habitacionSeleccionada = null;
-                for (HabitacionDTO hab : todasHabitaciones) {
-                    if (hab.getCodigo().equals(codigoHabitacion)) {
-                        habitacionSeleccionada = hab;
-                        break;
-                    }
-                }
-
-                if (habitacionSeleccionada != null) {
-                    double precioTotal = calcularPrecioTotal(habitacionSeleccionada, fechaDesde, fechaHasta);
-                    reserva.setPrecioTotal(precioTotal);
-
-                    reserva.setCodigoHotel(habitacionSeleccionada.getCodigoHotel());
-
-                    System.out.println("✅ Precio calculado: $" + precioTotal);
-                    System.out.println("✅ Hotel: " + habitacionSeleccionada.getCodigoHotel());
-                } else {
-                    System.out.println("❌ Habitación no encontrada: " + codigoHabitacion);
-                    return new ResultadoOperacion(false, "Habitación no encontrada: " + codigoHabitacion);
-                }
-
-            } catch (Exception e) {
-                System.out.println("❌ Error calculando precio: " + e.getMessage());
-                return new ResultadoOperacion(false, "Error calculando precio: " + e.getMessage());
-            }
-
-            System.out.println("🔍 VALIDANDO RESERVA...");
-            boolean esValida = reserva.esValida();
-            System.out.println("✅ Validación: " + esValida);
-
-            if (!esValida) {
-                System.out.println("❌ RESERVA INVÁLIDA - DETALLES:");
-                System.out.println("   - Código: '" + reserva.getCodigo() + "' (vacío: " + (reserva.getCodigo() == null || reserva.getCodigo().trim().isEmpty()) + ")");
-                System.out.println("   - Habitación: '" + reserva.getCodigoHabitacion() + "' (vacío: " + (reserva.getCodigoHabitacion() == null || reserva.getCodigoHabitacion().trim().isEmpty()) + ")");
-                System.out.println("   - Fecha desde: " + reserva.getFechaDesde());
-                System.out.println("   - Fecha hasta: " + reserva.getFechaHasta());
-                System.out.println("   - Estado: '" + reserva.getEstado() + "'");
-                return new ResultadoOperacion(false, "Datos de reserva inválidos después de configurar");
-            }
-
-            System.out.println("🚀 ENVIANDO RESERVA AL SERVIDOR...");
-
-            ResultadoOperacion resultado = crearReserva(reserva);
-
-            System.out.println("📊 RESULTADO: " + (resultado.isExito() ? "ÉXITO" : "ERROR"));
-            System.out.println("📝 MENSAJE: " + resultado.getMensaje());
-
-            return resultado;
-
-        } catch (Exception e) {
-            System.out.println("💥 EXCEPCIÓN: " + e.getMessage());
-            e.printStackTrace();
-            throw new IOException("Error creando reserva: " + e.getMessage(), e);
-        } finally {
-            System.out.println("=== FIN CREAR RESERVA SIMPLIFICADA ===\n");
-        }
+        // Para mantener retrocompatibilidad, usar "Sistema" como recepcionista por defecto
+        return crearReservaCompleta(nombreCliente, "Sistema", codigoHabitacion, fechaDesde, fechaHasta);
     }
 
     public ResultadoOperacion modificarReserva(ReservaDTO reserva) throws IOException {

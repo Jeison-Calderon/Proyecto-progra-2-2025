@@ -643,9 +643,9 @@ public class ConsultaDisponibilidad {
         if (dialogo.getCodigoReserva() != null && !dialogo.getCodigoReserva().isEmpty()) {
             mostrarInformacion("¡Reserva creada exitosamente!\n\n" +
                     "Código de reserva: " + dialogo.getCodigoReserva() + "\n" +
-                    "Cliente: " + disponibilidad.getNombreHotel() + "\n" +
+                    "Hotel: " + disponibilidad.getNombreHotel() + "\n" +
                     "Habitación: " + disponibilidad.getNumeroHabitacion());
-        } else {
+        } else if (dialogo.isReservaCreada()) {
             mostrarInformacion("Reserva creada exitosamente");
         }
     }
@@ -745,7 +745,7 @@ public class ConsultaDisponibilidad {
         public String toString() { return nombre; }
     }
 
-    // Diálogo de reserva rápida
+    // ✅ ACTUALIZADO: Diálogo de reserva rápida con campo recepcionista
     private class DialogoReservaRapida extends Stage {
         private DisponibilidadDTO disponibilidad;
         private LocalDate fechaDesde;
@@ -754,6 +754,7 @@ public class ConsultaDisponibilidad {
         private String codigoReserva;
 
         private TextField txtCliente;
+        private TextField txtRecepcionista; // ✅ NUEVO: Campo recepcionista
         private Label lblPrecioTotal;
 
         public DialogoReservaRapida(DisponibilidadDTO disponibilidad, LocalDate fechaDesde, LocalDate fechaHasta) {
@@ -794,7 +795,7 @@ public class ConsultaDisponibilidad {
 
             infoHabitacion.getChildren().addAll(lblTitulo, lblHotel, lblHabitacion, lblEstado, lblFechas, lblPrecioTotal);
 
-            // Formulario cliente
+            // ✅ ACTUALIZADO: Formulario con cliente y recepcionista
             VBox formulario = new VBox(10);
 
             Label lblCliente = new Label("Nombre del Cliente:");
@@ -804,7 +805,18 @@ public class ConsultaDisponibilidad {
             txtCliente.setPromptText("Ingrese el nombre completo del cliente");
             txtCliente.setPrefWidth(300);
 
-            formulario.getChildren().addAll(lblCliente, txtCliente);
+            // ✅ NUEVO: Campo recepcionista
+            Label lblRecepcionista = new Label("Recepcionista:");
+            lblRecepcionista.setStyle("-fx-font-weight: bold;");
+
+            txtRecepcionista = new TextField();
+            txtRecepcionista.setPromptText("Ingrese el nombre del recepcionista");
+            txtRecepcionista.setPrefWidth(300);
+
+            // ✅ MEJORA: Preconfigurar con el usuario actual (CalebHv21)
+            txtRecepcionista.setText("CalebHv21");
+
+            formulario.getChildren().addAll(lblCliente, txtCliente, lblRecepcionista, txtRecepcionista);
 
             // Botones
             HBox botones = new HBox(10);
@@ -828,6 +840,7 @@ public class ConsultaDisponibilidad {
 
         private void confirmarReserva() {
             String nombreCliente = txtCliente.getText().trim();
+            String recepcionista = txtRecepcionista.getText().trim(); // ✅ NUEVO
 
             if (nombreCliente.isEmpty()) {
                 Alert alert = new Alert(Alert.AlertType.WARNING);
@@ -838,9 +851,21 @@ public class ConsultaDisponibilidad {
                 return;
             }
 
+            // ✅ NUEVA: Validación de recepcionista
+            if (recepcionista.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Datos Incompletos");
+                alert.setHeaderText(null);
+                alert.setContentText("Ingrese el nombre del recepcionista");
+                alert.showAndWait();
+                return;
+            }
+
             try {
-                ResultadoOperacion resultado = servicioReservas.crearReserva(
+                // ✅ ACTUALIZADO: Usar el nuevo método crearReservaCompleta
+                ResultadoOperacion resultado = servicioReservas.crearReservaCompleta(
                         nombreCliente,
+                        recepcionista,
                         disponibilidad.getCodigoHabitacion(),
                         fechaDesde,
                         fechaHasta

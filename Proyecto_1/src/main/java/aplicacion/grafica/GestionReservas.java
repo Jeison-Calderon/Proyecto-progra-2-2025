@@ -18,12 +18,9 @@ import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 public class GestionReservas {
 
@@ -31,27 +28,12 @@ public class GestionReservas {
     private ServicioHoteles servicioHoteles;
 
     private ComboBox<HotelItem> comboHotel;
-    private ComboBox<String> comboEstado;
-    private TextField txtCliente;
-    private DatePicker dateDesde;
-    private DatePicker dateHasta;
-    private TextField txtCodigoReserva;
-    private Button btnFiltrar;
-    private Button btnLimpiar;
-    private Button btnActualizar;
-
-    // Tabla de reservas
     private TableView<ReservaDTO> tablaReservas;
     private ObservableList<ReservaDTO> datosTabla;
-    private List<ReservaDTO> todasLasReservas;
+    private Label lblTotal;
+    private Button btnActualizar;
+    private Button btnNuevaReserva; // ✅ NUEVO: Botón para nueva reserva
 
-    // Labels de estadísticas
-    private Label lblTotalReservas;
-    private Label lblReservasActivas;
-    private Label lblIngresoTotal;
-    private Label lblOcupacionPromedio;
-
-    // Vista principal
     private BorderPane vistaPrincipal;
 
     public GestionReservas() {
@@ -74,107 +56,48 @@ public class GestionReservas {
         vistaPrincipal = new BorderPane();
 
         // Panel superior - Filtros
-        VBox panelFiltros = crearPanelFiltros();
-        vistaPrincipal.setTop(panelFiltros);
+        VBox panelSuperior = crearPanelSuperior();
+        vistaPrincipal.setTop(panelSuperior);
 
         // Panel central - Tabla
         VBox panelCentral = crearPanelCentral();
         vistaPrincipal.setCenter(panelCentral);
 
         // Panel inferior - Estadísticas
-        HBox panelEstadisticas = crearPanelEstadisticas();
-        vistaPrincipal.setBottom(panelEstadisticas);
+        HBox panelInferior = crearPanelInferior();
+        vistaPrincipal.setBottom(panelInferior);
     }
 
-    private VBox crearPanelFiltros() {
+    private VBox crearPanelSuperior() {
         VBox contenedor = new VBox(10);
         contenedor.setPadding(new Insets(15));
         contenedor.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0;");
 
-        Label titulo = new Label("Filtros y Búsqueda de Reservas");
-        titulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
+        Label titulo = new Label("Gestión de Reservas");
+        titulo.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
 
-        // Primera fila - Hotel, Estado, Cliente
-        HBox fila1 = new HBox(15);
-        fila1.setAlignment(Pos.CENTER_LEFT);
+        HBox filtros = new HBox(15);
+        filtros.setAlignment(Pos.CENTER_LEFT);
 
         // Hotel
         VBox grupoHotel = new VBox(5);
-        Label lblHotel = new Label("Hotel:");
+        Label lblHotel = new Label("Filtrar por Hotel:");
         lblHotel.setStyle("-fx-font-weight: bold;");
         comboHotel = new ComboBox<>();
-        comboHotel.setPrefWidth(180);
+        comboHotel.setPrefWidth(200);
         grupoHotel.getChildren().addAll(lblHotel, comboHotel);
 
-        // Estado
-        VBox grupoEstado = new VBox(5);
-        Label lblEstado = new Label("Estado:");
-        lblEstado.setStyle("-fx-font-weight: bold;");
-        comboEstado = new ComboBox<>();
-        comboEstado.setPrefWidth(140);
-        comboEstado.getItems().addAll("Todos", "CONFIRMADA", "EN_CURSO", "FINALIZADA", "CANCELADA");
-        comboEstado.getSelectionModel().selectFirst();
-        grupoEstado.getChildren().addAll(lblEstado, comboEstado);
+        // Botones
+        btnActualizar = new Button("🔄 Actualizar");
+        btnActualizar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
 
-        // Cliente
-        VBox grupoCliente = new VBox(5);
-        Label lblCliente = new Label("Cliente:");
-        lblCliente.setStyle("-fx-font-weight: bold;");
-        txtCliente = new TextField();
-        txtCliente.setPrefWidth(180);
-        txtCliente.setPromptText("Nombre del cliente");
-        grupoCliente.getChildren().addAll(lblCliente, txtCliente);
+        // ✅ NUEVO: Botón para crear nueva reserva
+        btnNuevaReserva = new Button("➕ Nueva Reserva");
+        btnNuevaReserva.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
 
-        fila1.getChildren().addAll(grupoHotel, grupoEstado, grupoCliente);
+        filtros.getChildren().addAll(grupoHotel, btnActualizar, btnNuevaReserva);
 
-        // Segunda fila - Fechas y Código
-        HBox fila2 = new HBox(15);
-        fila2.setAlignment(Pos.CENTER_LEFT);
-
-        // Fecha desde
-        VBox grupoDesde = new VBox(5);
-        Label lblDesde = new Label("Desde:");
-        lblDesde.setStyle("-fx-font-weight: bold;");
-        dateDesde = new DatePicker();
-        dateDesde.setPrefWidth(140);
-        grupoDesde.getChildren().addAll(lblDesde, dateDesde);
-
-        // Fecha hasta
-        VBox grupoHasta = new VBox(5);
-        Label lblHasta = new Label("Hasta:");
-        lblHasta.setStyle("-fx-font-weight: bold;");
-        dateHasta = new DatePicker();
-        dateHasta.setPrefWidth(140);
-        grupoHasta.getChildren().addAll(lblHasta, dateHasta);
-
-        // Código de reserva
-        VBox grupoCodigo = new VBox(5);
-        Label lblCodigo = new Label("Código Reserva:");
-        lblCodigo.setStyle("-fx-font-weight: bold;");
-        txtCodigoReserva = new TextField();
-        txtCodigoReserva.setPrefWidth(140);
-        txtCodigoReserva.setPromptText("RES0001");
-        grupoCodigo.getChildren().addAll(lblCodigo, txtCodigoReserva);
-
-        fila2.getChildren().addAll(grupoDesde, grupoHasta, grupoCodigo);
-
-        // Tercera fila - Botones
-        HBox filaBotones = new HBox(10);
-        filaBotones.setAlignment(Pos.CENTER_LEFT);
-
-        btnFiltrar = new Button("Aplicar Filtros");
-        btnFiltrar.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
-
-        btnLimpiar = new Button("Limpiar Filtros");
-        btnLimpiar.setStyle("-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
-
-        btnActualizar = new Button("Actualizar");
-        btnActualizar.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16;");
-
-        filaBotones.getChildren().addAll(btnFiltrar, btnLimpiar, btnActualizar);
-
-        contenedor.getChildren().addAll(titulo, fila1, fila2, filaBotones);
-
+        contenedor.getChildren().addAll(titulo, filtros);
         return contenedor;
     }
 
@@ -182,30 +105,45 @@ public class GestionReservas {
         VBox contenedor = new VBox(10);
         contenedor.setPadding(new Insets(15));
 
-        Label titulo = new Label("Lista de Reservas");
-        titulo.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #343a40;");
-
         // Crear tabla
         tablaReservas = new TableView<>();
         datosTabla = FXCollections.observableArrayList();
         tablaReservas.setItems(datosTabla);
 
-        // Configurar columnas
+        // Configurar columnas - ✅ ACTUALIZADO: Incluye columna de recepcionista
+        crearColumnas();
+
+        contenedor.getChildren().add(tablaReservas);
+        VBox.setVgrow(tablaReservas, Priority.ALWAYS);
+
+        return contenedor;
+    }
+
+    private void crearColumnas() {
+        // Columna Código
         TableColumn<ReservaDTO, String> colCodigo = new TableColumn<>("Código");
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
-        colCodigo.setPrefWidth(80);
+        colCodigo.setPrefWidth(100);
 
+        // Columna Cliente
         TableColumn<ReservaDTO, String> colCliente = new TableColumn<>("Cliente");
         colCliente.setCellValueFactory(new PropertyValueFactory<>("clienteNombre"));
         colCliente.setPrefWidth(150);
 
+        // ✅ NUEVA: Columna Recepcionista
+        TableColumn<ReservaDTO, String> colRecepcionista = new TableColumn<>("Recepcionista");
+        colRecepcionista.setCellValueFactory(new PropertyValueFactory<>("recepcionista"));
+        colRecepcionista.setPrefWidth(120);
+
+        // Columna Habitación
         TableColumn<ReservaDTO, String> colHabitacion = new TableColumn<>("Habitación");
         colHabitacion.setCellValueFactory(new PropertyValueFactory<>("codigoHabitacion"));
         colHabitacion.setPrefWidth(100);
 
-        TableColumn<ReservaDTO, LocalDate> colFechaDesde = new TableColumn<>("Desde");
+        // Columna Fecha Desde
+        TableColumn<ReservaDTO, LocalDate> colFechaDesde = new TableColumn<>("Fecha Desde");
         colFechaDesde.setCellValueFactory(new PropertyValueFactory<>("fechaDesde"));
-        colFechaDesde.setPrefWidth(100);
+        colFechaDesde.setPrefWidth(120);
         colFechaDesde.setCellFactory(column -> new TableCell<ReservaDTO, LocalDate>() {
             @Override
             protected void updateItem(LocalDate fecha, boolean empty) {
@@ -218,9 +156,10 @@ public class GestionReservas {
             }
         });
 
-        TableColumn<ReservaDTO, LocalDate> colFechaHasta = new TableColumn<>("Hasta");
+        // Columna Fecha Hasta
+        TableColumn<ReservaDTO, LocalDate> colFechaHasta = new TableColumn<>("Fecha Hasta");
         colFechaHasta.setCellValueFactory(new PropertyValueFactory<>("fechaHasta"));
-        colFechaHasta.setPrefWidth(100);
+        colFechaHasta.setPrefWidth(120);
         colFechaHasta.setCellFactory(column -> new TableCell<ReservaDTO, LocalDate>() {
             @Override
             protected void updateItem(LocalDate fecha, boolean empty) {
@@ -233,21 +172,7 @@ public class GestionReservas {
             }
         });
 
-        TableColumn<ReservaDTO, Double> colPrecio = new TableColumn<>("Precio Total");
-        colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioTotal"));
-        colPrecio.setPrefWidth(100);
-        colPrecio.setCellFactory(column -> new TableCell<ReservaDTO, Double>() {
-            @Override
-            protected void updateItem(Double precio, boolean empty) {
-                super.updateItem(precio, empty);
-                if (empty || precio == null) {
-                    setText(null);
-                } else {
-                    setText(String.format("$%.2f", precio));
-                }
-            }
-        });
-
+        // Columna Estado
         TableColumn<ReservaDTO, String> colEstado = new TableColumn<>("Estado");
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
         colEstado.setPrefWidth(100);
@@ -260,33 +185,46 @@ public class GestionReservas {
                     setStyle("");
                 } else {
                     setText(estado);
-                    switch (estado) {
-                        case "CONFIRMADA":
-                            setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724;");
+                    switch (estado.toLowerCase()) {
+                        case "activa":
+                            setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-font-weight: bold;");
                             break;
-                        case "EN_CURSO":
-                            setStyle("-fx-background-color: #d1ecf1; -fx-text-fill: #0c5460;");
+                        case "cancelada":
+                            setStyle("-fx-background-color: #f8d7da; -fx-text-fill: #721c24; -fx-font-weight: bold;");
                             break;
-                        case "FINALIZADA":
-                            setStyle("-fx-background-color: #e2e3e5; -fx-text-fill: #383d41;");
-                            break;
-                        case "CANCELADA":
-                            setStyle("-fx-background-color: #f8d7da; -fx-text-fill: #721c24;");
+                        case "finalizada":
+                            setStyle("-fx-background-color: #e2e3e5; -fx-text-fill: #383d41; -fx-font-weight: bold;");
                             break;
                         default:
-                            setStyle("");
+                            setStyle("-fx-font-weight: bold;");
                     }
                 }
             }
         });
 
+        // Columna Precio
+        TableColumn<ReservaDTO, Double> colPrecio = new TableColumn<>("Precio Total");
+        colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioTotal"));
+        colPrecio.setPrefWidth(120);
+        colPrecio.setCellFactory(column -> new TableCell<ReservaDTO, Double>() {
+            @Override
+            protected void updateItem(Double precio, boolean empty) {
+                super.updateItem(precio, empty);
+                if (empty || precio == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("$%.2f", precio));
+                }
+            }
+        });
+
+        // Columna Acciones
         TableColumn<ReservaDTO, Void> colAcciones = new TableColumn<>("Acciones");
-        colAcciones.setPrefWidth(180);
-        colAcciones.setCellFactory(column -> new TableCell<ReservaDTO, Void>() {
-            private final HBox botones = new HBox(5);
-            private final Button btnVer = new Button("Ver");
-            private final Button btnEditar = new Button("Editar");
-            private final Button btnEliminar = new Button("Eliminar");
+        colAcciones.setPrefWidth(200);
+        colAcciones.setCellFactory(param -> new TableCell<ReservaDTO, Void>() {
+            private final Button btnVer = new Button("👁️ Ver");
+            private final Button btnEditar = new Button("✏️ Editar");
+            private final Button btnEliminar = new Button("🗑️ Eliminar");
 
             {
                 btnVer.setStyle("-fx-background-color: #17a2b8; -fx-text-fill: white; -fx-font-size: 10px; -fx-padding: 3 8;");
@@ -307,9 +245,6 @@ public class GestionReservas {
                     ReservaDTO reserva = getTableView().getItems().get(getIndex());
                     confirmarEliminacion(reserva);
                 });
-
-                botones.getChildren().addAll(btnVer, btnEditar, btnEliminar);
-                botones.setAlignment(Pos.CENTER);
             }
 
             @Override
@@ -318,98 +253,61 @@ public class GestionReservas {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    ReservaDTO reserva = getTableView().getItems().get(getIndex());
-
-                    // Deshabilitar edición/eliminación para reservas finalizadas
-                    boolean esEditable = reserva != null &&
-                            !"FINALIZADA".equals(reserva.getEstado()) &&
-                            !"CANCELADA".equals(reserva.getEstado());
-
-                    btnEditar.setDisable(!esEditable);
-                    btnEliminar.setDisable(!esEditable);
-
+                    HBox botones = new HBox(5);
+                    botones.getChildren().addAll(btnVer, btnEditar, btnEliminar);
                     setGraphic(botones);
                 }
             }
         });
 
-        tablaReservas.getColumns().addAll(colCodigo, colCliente, colHabitacion, colFechaDesde,
-                colFechaHasta, colPrecio, colEstado, colAcciones);
-
-        // Configurar tabla
-        tablaReservas.setRowFactory(tv -> {
-            TableRow<ReservaDTO> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
-                    abrirDialogoDetalles(row.getItem());
-                }
-            });
-            return row;
-        });
-
-        tablaReservas.setPrefHeight(400);
-
-        contenedor.getChildren().addAll(titulo, tablaReservas);
-        VBox.setVgrow(tablaReservas, Priority.ALWAYS);
-
-        return contenedor;
+        // ✅ ACTUALIZADO: Agregar todas las columnas incluyendo la nueva de recepcionista
+        tablaReservas.getColumns().addAll(colCodigo, colCliente, colRecepcionista, colHabitacion,
+                colFechaDesde, colFechaHasta, colEstado, colPrecio, colAcciones);
     }
 
-    private HBox crearPanelEstadisticas() {
+    private HBox crearPanelInferior() {
         HBox contenedor = new HBox(20);
         contenedor.setPadding(new Insets(10, 15, 15, 15));
         contenedor.setAlignment(Pos.CENTER_LEFT);
-        contenedor.setStyle("-fx-background-color: #fff3cd; -fx-border-color: #ffeaa7; -fx-border-width: 1 0 0 0;");
+        contenedor.setStyle("-fx-background-color: #e9ecef; -fx-border-color: #ced4da; -fx-border-width: 1 0 0 0;");
 
-        lblTotalReservas = crearLabelEstadistica("Total: 0 reservas", "#007bff");
-        lblReservasActivas = crearLabelEstadistica("Activas: 0", "#28a745");
-        lblIngresoTotal = crearLabelEstadistica("Ingresos: $0.00", "#17a2b8");
-        lblOcupacionPromedio = crearLabelEstadistica("Ocupación: 0%", "#6c757d");
+        lblTotal = new Label("Total: 0 reservas");
+        lblTotal.setStyle("-fx-font-weight: bold; -fx-text-fill: #495057;");
 
-        contenedor.getChildren().addAll(lblTotalReservas, lblReservasActivas, lblIngresoTotal, lblOcupacionPromedio);
-
+        contenedor.getChildren().add(lblTotal);
         return contenedor;
     }
 
-    private Label crearLabelEstadistica(String texto, String color) {
-        Label label = new Label(texto);
-        label.setStyle("-fx-font-weight: bold; -fx-text-fill: " + color + "; -fx-padding: 5 10; " +
-                "-fx-background-color: white; -fx-border-color: " + color + "; -fx-border-radius: 3;");
-        return label;
+    private void configurarEventos() {
+        btnActualizar.setOnAction(e -> cargarReservas());
+        btnNuevaReserva.setOnAction(e -> abrirNuevaReserva()); // ✅ NUEVO
+        comboHotel.setOnAction(e -> cargarReservas());
     }
 
-    private void configurarEventos() {
-        btnFiltrar.setOnAction(e -> aplicarFiltros());
-        btnLimpiar.setOnAction(e -> limpiarFiltros());
-        btnActualizar.setOnAction(e -> cargarReservas());
+    // ✅ NUEVO: Método para abrir ventana de nueva reserva
+    private void abrirNuevaReserva() {
+        try {
+            NuevaReserva ventanaNuevaReserva = new NuevaReserva();
+            ventanaNuevaReserva.showAndWait();
 
-        // Auto-filtrado al escribir en código de reserva
-        txtCodigoReserva.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null && !newVal.isEmpty()) {
-                aplicarFiltros();
+            if (ventanaNuevaReserva.isReservaCreada()) {
+                cargarReservas(); // Recargar datos
+                mostrarInformacion("¡Reserva creada exitosamente!\n\n" +
+                        "Código: " + (ventanaNuevaReserva.getCodigoReservaCreada() != null ?
+                        ventanaNuevaReserva.getCodigoReservaCreada() : "Generado"));
             }
-        });
+        } catch (Exception e) {
+            mostrarError("Error abriendo ventana de nueva reserva: " + e.getMessage());
+        }
     }
 
     private void cargarDatosIniciales() {
-        // Cargar hoteles
-        cargarHoteles();
-
-        // Cargar reservas
-        cargarReservas();
-    }
-
-    private void cargarHoteles() {
-        Task<List<HotelDTO>> task = new Task<List<HotelDTO>>() {
+        Task<Void> task = new Task<Void>() {
             @Override
-            protected List<HotelDTO> call() throws Exception {
-                return servicioHoteles.listarHoteles();
-            }
+            protected Void call() throws Exception {
+                List<HotelDTO> hoteles = servicioHoteles.listarHoteles();
 
-            @Override
-            protected void succeeded() {
                 Platform.runLater(() -> {
-                    List<HotelDTO> hoteles = getValue();
                     comboHotel.getItems().clear();
                     comboHotel.getItems().add(new HotelItem(null, "Todos los hoteles"));
 
@@ -418,11 +316,18 @@ public class GestionReservas {
                     }
                     comboHotel.getSelectionModel().selectFirst();
                 });
+
+                return null;
+            }
+
+            @Override
+            protected void succeeded() {
+                Platform.runLater(() -> cargarReservas());
             }
 
             @Override
             protected void failed() {
-                Platform.runLater(() -> mostrarError("Error cargando hoteles: " + getException().getMessage()));
+                Platform.runLater(() -> mostrarError("Error cargando datos iniciales: " + getException().getMessage()));
             }
         };
 
@@ -430,163 +335,46 @@ public class GestionReservas {
     }
 
     private void cargarReservas() {
-        btnActualizar.setDisable(true);
-        btnActualizar.setText("Cargando...");
-
-        Task<List<ReservaDTO>> task = new Task<List<ReservaDTO>>() {
+        Task<Void> task = new Task<Void>() {
             @Override
-            protected List<ReservaDTO> call() throws Exception {
-                return servicioReservas.listarReservas();
-            }
+            protected Void call() throws Exception {
+                String codigoHotel = null;
+                HotelItem hotelSeleccionado = comboHotel.getSelectionModel().getSelectedItem();
+                if (hotelSeleccionado != null && hotelSeleccionado.getCodigo() != null) {
+                    codigoHotel = hotelSeleccionado.getCodigo();
+                }
 
-            @Override
-            protected void succeeded() {
+                List<ReservaDTO> reservas = servicioReservas.listarReservasPorHotel(codigoHotel);
+
                 Platform.runLater(() -> {
-                    todasLasReservas = getValue();
-                    actualizarTabla(todasLasReservas);
-                    actualizarEstadisticas(todasLasReservas);
-
-                    btnActualizar.setDisable(false);
-                    btnActualizar.setText("Actualizar");
+                    datosTabla.clear();
+                    datosTabla.addAll(reservas);
+                    lblTotal.setText("Total: " + reservas.size() + " reservas");
                 });
+
+                return null;
             }
 
             @Override
             protected void failed() {
-                Platform.runLater(() -> {
-                    mostrarError("Error cargando reservas: " + getException().getMessage());
-                    btnActualizar.setDisable(false);
-                    btnActualizar.setText("Actualizar");
-                });
+                Platform.runLater(() -> mostrarError("Error cargando reservas: " + getException().getMessage()));
             }
         };
 
         new Thread(task).start();
     }
 
-    private void aplicarFiltros() {
-        if (todasLasReservas == null) {
-            return;
-        }
-
-        List<ReservaDTO> reservasFiltradas = todasLasReservas.stream()
-                .filter(this::aplicarFiltroHotel)
-                .filter(this::aplicarFiltroEstado)
-                .filter(this::aplicarFiltroCliente)
-                .filter(this::aplicarFiltroFechas)
-                .filter(this::aplicarFiltroCodigo)
-                .collect(Collectors.toList());
-
-        actualizarTabla(reservasFiltradas);
-        actualizarEstadisticas(reservasFiltradas);
-    }
-
-    private boolean aplicarFiltroHotel(ReservaDTO reserva) {
-        HotelItem hotelSeleccionado = comboHotel.getSelectionModel().getSelectedItem();
-        if (hotelSeleccionado == null || hotelSeleccionado.getCodigo() == null) {
-            return true;
-        }
-        return true;
-    }
-
-    private boolean aplicarFiltroEstado(ReservaDTO reserva) {
-        String estadoSeleccionado = comboEstado.getSelectionModel().getSelectedItem();
-        return estadoSeleccionado == null || "Todos".equals(estadoSeleccionado) ||
-                estadoSeleccionado.equals(reserva.getEstado());
-    }
-
-    private boolean aplicarFiltroCliente(ReservaDTO reserva) {
-        String filtroCliente = txtCliente.getText().trim();
-        if (filtroCliente.isEmpty()) {
-            return true;
-        }
-
-        return reserva.getClienteNombre() != null &&
-                reserva.getClienteNombre().toLowerCase().contains(filtroCliente.toLowerCase());
-    }
-
-    private boolean aplicarFiltroFechas(ReservaDTO reserva) {
-        LocalDate desde = dateDesde.getValue();
-        LocalDate hasta = dateHasta.getValue();
-
-        if (desde == null && hasta == null) {
-            return true;
-        }
-
-        LocalDate fechaReserva = reserva.getFechaDesde();
-        if (fechaReserva == null) {
-            return false;
-        }
-
-        boolean cumpleDesde = desde == null || !fechaReserva.isBefore(desde);
-        boolean cumpleHasta = hasta == null || !fechaReserva.isAfter(hasta);
-
-        return cumpleDesde && cumpleHasta;
-    }
-
-    private boolean aplicarFiltroCodigo(ReservaDTO reserva) {
-        String filtrocodigo = txtCodigoReserva.getText().trim();
-        if (filtrocodigo.isEmpty()) {
-            return true;
-        }
-
-        return reserva.getCodigo() != null &&
-                reserva.getCodigo().toLowerCase().contains(filtrocodigo.toLowerCase());
-    }
-
-    private void actualizarTabla(List<ReservaDTO> reservas) {
-        datosTabla.clear();
-        datosTabla.addAll(reservas);
-    }
-
-    private void actualizarEstadisticas(List<ReservaDTO> reservas) {
-        int total = reservas.size();
-        long activas = reservas.stream()
-                .filter(r -> "CONFIRMADA".equals(r.getEstado()) || "EN_CURSO".equals(r.getEstado()))
-                .count();
-
-        double ingresoTotal = reservas.stream()
-                .filter(r -> !"CANCELADA".equals(r.getEstado()))
-                .mapToDouble(ReservaDTO::getPrecioTotal)
-                .sum();
-
-        double porcentajeOcupacion = total > 0 ? (activas * 100.0 / total) : 0;
-
-        lblTotalReservas.setText("Total: " + total + " reservas");
-        lblReservasActivas.setText("Activas: " + activas);
-        lblIngresoTotal.setText(String.format("Ingresos: $%.2f", ingresoTotal));
-        lblOcupacionPromedio.setText(String.format("Activas: %.1f%%", porcentajeOcupacion));
-    }
-
-    private void abrirDialogoDetalles(ReservaDTO reserva) {
-        DialogoDetallesReserva dialogo = new DialogoDetallesReserva(reserva);
-        dialogo.showAndWait();
-    }
-
-    private void abrirDialogoEdicion(ReservaDTO reserva) {
-        DialogoEditarReserva dialogo = new DialogoEditarReserva(reserva);
-        dialogo.showAndWait();
-
-        if (dialogo.isReservaModificada()) {
-            cargarReservas(); // Recargar datos
-        }
-    }
-
     private void confirmarEliminacion(ReservaDTO reserva) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Confirmar Eliminación");
-        alert.setHeaderText("¿Eliminar reserva " + reserva.getCodigo() + "?");
-        alert.setContentText("Esta acción no se puede deshacer.\n\nCliente: " + reserva.getClienteNombre() +
-                "\nFechas: " + reserva.getFechaDesde() + " al " + reserva.getFechaHasta());
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Confirmar Eliminación");
+        confirmacion.setHeaderText("¿Eliminar reserva?");
+        confirmacion.setContentText("¿Está seguro de que desea eliminar la reserva " + reserva.getCodigo() + "?");
 
-        ButtonType btnEliminar = new ButtonType("Eliminar", ButtonBar.ButtonData.OK_DONE);
-        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
-        alert.getDialogPane().getButtonTypes().setAll(btnEliminar, btnCancelar);
-
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == btnEliminar) {
-            eliminarReserva(reserva);
-        }
+        confirmacion.showAndWait().ifPresent(respuesta -> {
+            if (respuesta == ButtonType.OK) {
+                eliminarReserva(reserva);
+            }
+        });
     }
 
     private void eliminarReserva(ReservaDTO reserva) {
@@ -601,8 +389,8 @@ public class GestionReservas {
                 Platform.runLater(() -> {
                     ResultadoOperacion resultado = getValue();
                     if (resultado.isExito()) {
-                        mostrarInformacion("Reserva eliminada exitosamente");
                         cargarReservas();
+                        mostrarInformacion("Reserva eliminada exitosamente");
                     } else {
                         mostrarError("Error eliminando reserva: " + resultado.getMensaje());
                     }
@@ -618,17 +406,17 @@ public class GestionReservas {
         new Thread(task).start();
     }
 
-    private void limpiarFiltros() {
-        comboHotel.getSelectionModel().selectFirst();
-        comboEstado.getSelectionModel().selectFirst();
-        txtCliente.clear();
-        dateDesde.setValue(null);
-        dateHasta.setValue(null);
-        txtCodigoReserva.clear();
+    private void abrirDialogoDetalles(ReservaDTO reserva) {
+        DialogoDetallesReserva dialogo = new DialogoDetallesReserva(reserva);
+        dialogo.showAndWait();
+    }
 
-        if (todasLasReservas != null) {
-            actualizarTabla(todasLasReservas);
-            actualizarEstadisticas(todasLasReservas);
+    private void abrirDialogoEdicion(ReservaDTO reserva) {
+        DialogoEditarReserva dialogo = new DialogoEditarReserva(reserva);
+        dialogo.showAndWait();
+
+        if (dialogo.isReservaModificada()) {
+            cargarReservas(); // Recargar datos
         }
     }
 
@@ -668,7 +456,7 @@ public class GestionReservas {
         public String toString() { return nombre; }
     }
 
-    // Diálogo de detalles de reserva
+    // ✅ ACTUALIZADO: Diálogo de detalles con campo recepcionista
     private class DialogoDetallesReserva extends Stage {
 
         public DialogoDetallesReserva(ReservaDTO reserva) {
@@ -696,37 +484,44 @@ public class GestionReservas {
             grid.add(new Label(reserva.getCodigo()), 1, 0);
 
             grid.add(new Label("Cliente:"), 0, 1);
-            grid.add(new Label(reserva.getClienteNombre()), 1, 1);
+            grid.add(new Label(reserva.getClienteNombre() != null ? reserva.getClienteNombre() : "No especificado"), 1, 1);
 
-            grid.add(new Label("Habitación:"), 0, 2);
-            grid.add(new Label(reserva.getCodigoHabitacion()), 1, 2);
+            // ✅ NUEVO: Campo recepcionista en detalles
+            grid.add(new Label("Recepcionista:"), 0, 2);
+            grid.add(new Label(reserva.getRecepcionista() != null ? reserva.getRecepcionista() : "No especificado"), 1, 2);
 
-            grid.add(new Label("Fecha Desde:"), 0, 3);
-            grid.add(new Label(reserva.getFechaDesde().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), 1, 3);
+            grid.add(new Label("Habitación:"), 0, 3);
+            grid.add(new Label(reserva.getCodigoHabitacion()), 1, 3);
 
-            grid.add(new Label("Fecha Hasta:"), 0, 4);
-            grid.add(new Label(reserva.getFechaHasta().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), 1, 4);
+            grid.add(new Label("Fecha Desde:"), 0, 4);
+            grid.add(new Label(reserva.getFechaDesde().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), 1, 4);
 
-            grid.add(new Label("Precio Total:"), 0, 5);
-            grid.add(new Label(String.format("$%.2f", reserva.getPrecioTotal())), 1, 5);
+            grid.add(new Label("Fecha Hasta:"), 0, 5);
+            grid.add(new Label(reserva.getFechaHasta().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), 1, 5);
 
-            grid.add(new Label("Estado:"), 0, 6);
+            grid.add(new Label("Precio Total:"), 0, 6);
+            grid.add(new Label(String.format("$%.2f", reserva.getPrecioTotal())), 1, 6);
+
+            grid.add(new Label("Estado:"), 0, 7);
             Label lblEstado = new Label(reserva.getEstado());
-            switch (reserva.getEstado()) {
-                case "CONFIRMADA":
+            switch (reserva.getEstado().toLowerCase()) {
+                case "activa":
                     lblEstado.setStyle("-fx-background-color: #d4edda; -fx-text-fill: #155724; -fx-padding: 3 8;");
                     break;
-                case "EN_CURSO":
-                    lblEstado.setStyle("-fx-background-color: #d1ecf1; -fx-text-fill: #0c5460; -fx-padding: 3 8;");
-                    break;
-                case "FINALIZADA":
-                    lblEstado.setStyle("-fx-background-color: #e2e3e5; -fx-text-fill: #383d41; -fx-padding: 3 8;");
-                    break;
-                case "CANCELADA":
+                case "cancelada":
                     lblEstado.setStyle("-fx-background-color: #f8d7da; -fx-text-fill: #721c24; -fx-padding: 3 8;");
                     break;
+                case "finalizada":
+                    lblEstado.setStyle("-fx-background-color: #e2e3e5; -fx-text-fill: #383d41; -fx-padding: 3 8;");
+                    break;
             }
-            grid.add(lblEstado, 1, 6);
+            grid.add(lblEstado, 1, 7);
+
+            // ✅ NUEVO: Mostrar fecha de creación si está disponible
+            if (reserva.getFechaCreacion() != null) {
+                grid.add(new Label("Fecha Creación:"), 0, 8);
+                grid.add(new Label(reserva.getFechaCreacion().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))), 1, 8);
+            }
 
             // Botón cerrar
             Button btnCerrar = new Button("Cerrar");
@@ -743,12 +538,13 @@ public class GestionReservas {
         }
     }
 
-    // Diálogo de edición de reserva
+    // ✅ ACTUALIZADO: Diálogo de edición con campo recepcionista
     private class DialogoEditarReserva extends Stage {
         private ReservaDTO reserva;
         private boolean reservaModificada = false;
 
         private TextField txtCliente;
+        private TextField txtRecepcionista; // ✅ NUEVO: Campo recepcionista
         private DatePicker dateDesde;
         private DatePicker dateHasta;
         private ComboBox<String> comboEstado;
@@ -781,23 +577,29 @@ public class GestionReservas {
             grid.add(lblCodigo, 1, 0);
 
             grid.add(new Label("Cliente:"), 0, 1);
-            txtCliente = new TextField(reserva.getClienteNombre());
-            txtCliente.setPrefWidth(200);
+            txtCliente = new TextField(reserva.getClienteNombre() != null ? reserva.getClienteNombre() : "");
+            txtCliente.setPrefWidth(250);
             grid.add(txtCliente, 1, 1);
 
-            grid.add(new Label("Fecha Desde:"), 0, 2);
+            // ✅ NUEVO: Campo recepcionista en edición
+            grid.add(new Label("Recepcionista:"), 0, 2);
+            txtRecepcionista = new TextField(reserva.getRecepcionista() != null ? reserva.getRecepcionista() : "");
+            txtRecepcionista.setPrefWidth(250);
+            grid.add(txtRecepcionista, 1, 2);
+
+            grid.add(new Label("Fecha Desde:"), 0, 3);
             dateDesde = new DatePicker(reserva.getFechaDesde());
-            grid.add(dateDesde, 1, 2);
+            grid.add(dateDesde, 1, 3);
 
-            grid.add(new Label("Fecha Hasta:"), 0, 3);
+            grid.add(new Label("Fecha Hasta:"), 0, 4);
             dateHasta = new DatePicker(reserva.getFechaHasta());
-            grid.add(dateHasta, 1, 3);
+            grid.add(dateHasta, 1, 4);
 
-            grid.add(new Label("Estado:"), 0, 4);
+            grid.add(new Label("Estado:"), 0, 5);
             comboEstado = new ComboBox<>();
-            comboEstado.getItems().addAll("CONFIRMADA", "EN_CURSO", "FINALIZADA", "CANCELADA");
+            comboEstado.getItems().addAll("activa", "cancelada", "finalizada");
             comboEstado.setValue(reserva.getEstado());
-            grid.add(comboEstado, 1, 4);
+            grid.add(comboEstado, 1, 5);
 
             HBox botones = new HBox(10);
             botones.setAlignment(Pos.CENTER);
@@ -823,8 +625,9 @@ public class GestionReservas {
                 return;
             }
 
-            // Actualizar reserva
+            // ✅ ACTUALIZADO: Incluir recepcionista en la actualización
             reserva.setClienteNombre(txtCliente.getText().trim());
+            reserva.setRecepcionista(txtRecepcionista.getText().trim());
             reserva.setFechaDesde(dateDesde.getValue());
             reserva.setFechaHasta(dateHasta.getValue());
             reserva.setEstado(comboEstado.getValue());
@@ -860,6 +663,12 @@ public class GestionReservas {
         private boolean validarFormulario() {
             if (txtCliente.getText().trim().isEmpty()) {
                 mostrarError("El nombre del cliente es requerido");
+                return false;
+            }
+
+            // ✅ NUEVA: Validación de recepcionista
+            if (txtRecepcionista.getText().trim().isEmpty()) {
+                mostrarError("El nombre del recepcionista es requerido");
                 return false;
             }
 

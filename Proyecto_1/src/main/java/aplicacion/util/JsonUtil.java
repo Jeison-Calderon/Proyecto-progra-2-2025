@@ -170,6 +170,7 @@ public class JsonUtil {
                 habitacion.getImagenes().size());
     }
 
+    // ✅ ACTUALIZADO: Método reservaToJson con campo recepcionista
     public static JSONObject reservaToJson(ReservaDTO reserva) {
         JSONObject json = new JSONObject();
         json.put("codigo", reserva.getCodigo() != null ? reserva.getCodigo() : "");
@@ -177,6 +178,7 @@ public class JsonUtil {
         json.put("codigoHotel", reserva.getCodigoHotel() != null ? reserva.getCodigoHotel() : "");
         json.put("estado", reserva.getEstado() != null ? reserva.getEstado() : ReservaDTO.ESTADO_ACTIVA);
         json.put("clienteNombre", reserva.getClienteNombre() != null ? reserva.getClienteNombre() : "");
+        json.put("recepcionista", reserva.getRecepcionista() != null ? reserva.getRecepcionista() : ""); // ✅ NUEVO
         json.put("precioTotal", reserva.getPrecioTotal());
         json.put("fechaDesde", reserva.getFechaDesdeString());
         json.put("fechaHasta", reserva.getFechaHastaString());
@@ -190,12 +192,14 @@ public class JsonUtil {
         return json;
     }
 
+    // ✅ ACTUALIZADO: Método jsonToReserva con campo recepcionista
     public static ReservaDTO jsonToReserva(JSONObject json) {
         String codigo = json.optString("codigo", "");
         String codigoHabitacion = json.optString("codigoHabitacion", "");
         String codigoHotel = json.optString("codigoHotel", "");
         String estado = json.optString("estado", ReservaDTO.ESTADO_ACTIVA);
         String clienteNombre = json.optString("clienteNombre", "");
+        String recepcionista = json.optString("recepcionista", "Sistema"); // ✅ NUEVO: Con valor por defecto
         double precioTotal = json.optDouble("precioTotal", 0.0);
 
         LocalDate fechaDesde = null;
@@ -223,9 +227,17 @@ public class JsonUtil {
             System.err.println("❌ Error parseando fechas en JSON: " + e.getMessage());
         }
 
-        ReservaDTO reserva = new ReservaDTO(codigo, codigoHabitacion, codigoHotel,
-                fechaDesde, fechaHasta, estado,
-                clienteNombre, precioTotal);
+        // ✅ ACTUALIZADO: Crear ReservaDTO con el nuevo constructor que incluye recepcionista
+        ReservaDTO reserva = new ReservaDTO();
+        reserva.setCodigo(codigo);
+        reserva.setCodigoHabitacion(codigoHabitacion);
+        reserva.setCodigoHotel(codigoHotel);
+        reserva.setFechaDesde(fechaDesde);
+        reserva.setFechaHasta(fechaHasta);
+        reserva.setEstado(estado);
+        reserva.setClienteNombre(clienteNombre);
+        reserva.setRecepcionista(recepcionista); // ✅ NUEVO
+        reserva.setPrecioTotal(precioTotal);
 
         if (fechaCreacion != null) {
             reserva.setFechaCreacion(fechaCreacion);
@@ -320,14 +332,15 @@ public class JsonUtil {
         }
     }
 
+    // ✅ ACTUALIZADO: Método reservaToString con campo recepcionista
     public static String reservaToString(ReservaDTO reserva) {
         if (reserva == null) return "null";
 
-        return String.format("Reserva{código='%s', habitación='%s', cliente='%s', " +
+        return String.format("Reserva{código='%s', habitación='%s', cliente='%s', recepcionista='%s', " +
                         "desde='%s', hasta='%s', estado='%s', precio=%.2f, duración=%d días}",
                 reserva.getCodigo(), reserva.getCodigoHabitacion(),
-                reserva.getClienteNombre(), reserva.getFechaDesdeString(),
-                reserva.getFechaHastaString(), reserva.getEstado(),
+                reserva.getClienteNombre(), reserva.getRecepcionista(), // ✅ NUEVO
+                reserva.getFechaDesdeString(), reserva.getFechaHastaString(), reserva.getEstado(),
                 reserva.getPrecioTotal(), reserva.getDuracionDias());
     }
 

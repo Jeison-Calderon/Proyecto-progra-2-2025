@@ -16,6 +16,7 @@ public class ReservaDTO implements Serializable {
 
     private String codigoHotel;
     private String clienteNombre;
+    private String recepcionista;  // ✅ NUEVO: Campo recepcionista agregado
     private double precioTotal;
     private LocalDate fechaCreacion;
 
@@ -39,9 +40,10 @@ public class ReservaDTO implements Serializable {
         this.fechaHasta = fechaHasta;
     }
 
+    // ✅ ACTUALIZADO: Constructor con recepcionista
     public ReservaDTO(String codigo, String codigoHabitacion, String codigoHotel,
                       LocalDate fechaDesde, LocalDate fechaHasta, String estado,
-                      String clienteNombre, double precioTotal) {
+                      String clienteNombre, String recepcionista, double precioTotal) {
         this.codigo = codigo;
         this.codigoHabitacion = codigoHabitacion;
         this.codigoHotel = codigoHotel;
@@ -49,10 +51,12 @@ public class ReservaDTO implements Serializable {
         this.fechaHasta = fechaHasta;
         this.estado = estado != null ? estado : ESTADO_ACTIVA;
         this.clienteNombre = clienteNombre;
+        this.recepcionista = recepcionista;  // ✅ NUEVO
         this.precioTotal = precioTotal;
         this.fechaCreacion = LocalDate.now();
     }
 
+    // Getters y Setters existentes
     public String getCodigo() { return codigo; }
     public void setCodigo(String codigo) { this.codigo = codigo; }
 
@@ -73,6 +77,10 @@ public class ReservaDTO implements Serializable {
 
     public String getClienteNombre() { return clienteNombre; }
     public void setClienteNombre(String clienteNombre) { this.clienteNombre = clienteNombre; }
+
+    // ✅ NUEVO: Getter y Setter para recepcionista
+    public String getRecepcionista() { return recepcionista; }
+    public void setRecepcionista(String recepcionista) { this.recepcionista = recepcionista; }
 
     public double getPrecioTotal() { return precioTotal; }
     public void setPrecioTotal(double precioTotal) { this.precioTotal = precioTotal; }
@@ -119,9 +127,12 @@ public class ReservaDTO implements Serializable {
         return !(fechaHasta.isBefore(desde) || fechaDesde.isAfter(hasta));
     }
 
+    // ✅ ACTUALIZADO: Validación incluye recepcionista como campo requerido
     public boolean esValida() {
         return codigo != null && !codigo.trim().isEmpty() &&
                 codigoHabitacion != null && !codigoHabitacion.trim().isEmpty() &&
+                clienteNombre != null && !clienteNombre.trim().isEmpty() &&
+                recepcionista != null && !recepcionista.trim().isEmpty() &&  // ✅ NUEVO: Validación recepcionista
                 fechaDesde != null && fechaHasta != null &&
                 !fechaDesde.isAfter(fechaHasta);
     }
@@ -181,12 +192,14 @@ public class ReservaDTO implements Serializable {
                 '}';
     }
 
+    // ✅ ACTUALIZADO: toString completo incluye recepcionista
     public String toStringCompleto() {
         return "ReservaDTO{" +
                 "codigo='" + codigo + '\'' +
                 ", habitación='" + codigoHabitacion + '\'' +
                 ", hotel='" + codigoHotel + '\'' +
                 ", cliente='" + clienteNombre + '\'' +
+                ", recepcionista='" + recepcionista + '\'' +  // ✅ NUEVO
                 ", desde=" + fechaDesde +
                 ", hasta=" + fechaHasta +
                 ", duración=" + getDuracionDias() + " días" +
